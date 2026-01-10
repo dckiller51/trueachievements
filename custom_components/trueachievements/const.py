@@ -1,6 +1,10 @@
 """Constants for the TrueAchievements integration."""
 
+NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
+VERSION = "2026.1.1"
+
+ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
 
 # Configuration keys
 CONF_AUTH_STATUS = "auth_status"
@@ -27,3 +31,21 @@ ATTR_COMPLETION_PCT = "completion_percentage"
 ATTR_TOTAL_GAMES = "total_games"
 ATTR_COMPLETED_GAMES = "completed_games"
 ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
+
+# Game Name Mapping (Xbox Name: TrueAchievements Name)
+# This handles discrepancies between Xbox Live's "Now Playing" status
+# and how games are indexed in the TA CSV export.
+GAME_NAME_MAPPING = {
+
+    "Minecraft for Android": "Minecraft (Android)"
+}
+
+STARTUP_MESSAGE = f"""
+-------------------------------------------------------------------
+{NAME}
+Version: {VERSION}
+This is a custom integration!
+If you have any issues with this you need to open an issue here:
+{ISSUE_URL}
+-------------------------------------------------------------------
+"""
