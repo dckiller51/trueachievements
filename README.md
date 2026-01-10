@@ -1,7 +1,6 @@
 # TrueAchievements for Home Assistant
 
-> [!IMPORTANT]
-> **This integration requires a TrueAchievements PRO account.** > Data is retrieved via the "CSV Export" feature, which is a premium feature exclusive to Pro members on the TrueAchievements website.
+> [!IMPORTANT] > **This integration requires a TrueAchievements PRO account.** > Data is retrieved via the "CSV Export" feature, which is a premium feature exclusive to Pro members on the TrueAchievements website.
 
 [![GH-release](https://img.shields.io/github/v/release/dckiller51/trueachievements.svg?style=flat-square)](https://github.com/dckiller51/trueachievements/releases)
 [![GH-downloads](https://img.shields.io/github/downloads/dckiller51/trueachievements/total?style=flat-square)](https://github.com/dckiller51/trueachievements/releases)
@@ -17,6 +16,7 @@ Bring your Xbox accomplishments into Home Assistant! This integration synchroniz
 The integration utilizes the TrueAchievements CSV export feature to fetch your data. It periodically scans your collection and, when linked with a Home Assistant Xbox sensor, triggers an immediate refresh whenever you switch games.
 
 **Key Features:**
+
 - **Global Stats:** Track your total Gamerscore, TrueAchievement Score, and overall completion percentage.
 - **Dynamic "Now Playing":** See the current game's title, platform, achievement progress, and TA ratio.
 - **Privacy Focused:** All CSV processing is done locally on your Home Assistant instance.
@@ -31,6 +31,7 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 ## Installation
 
 ### Via HACS (Manual Custom Repository)
+
 > [!NOTE]
 > Official inclusion in the HACS default list is **coming soon**. In the meantime, you can easily add it manually.
 
@@ -43,6 +44,7 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 7. Restart Home Assistant.
 
 ### Manual Installation
+
 1. Download the latest release.
 2. Copy the `custom_components/trueachievements` folder into your `config/custom_components` directory.
 3. Restart Home Assistant.
@@ -60,26 +62,31 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 
 ## Sensors Created
 
-| Sensor | Description |
-| :--- | :--- |
-| **Gamerscore** | Your total Gamerscore (G). |
-| **TA Score** | Your total TrueAchievement score. |
-| **Completion %** | Your global achievement completion rate. |
-| **Total Games** | Number of games started. |
-| **Now Playing** | Current game name with detailed attributes (Ratio, Hours played, etc.). |
-| **Auth Status** | Binary sensor to alert if your Token has expired. |
+| Sensor                 | Description                                                             |
+| :--------------------- | :---------------------------------------------------------------------- |
+| **Gamerscore**         | Your total Gamerscore (G).                                              |
+| **TA Score**           | Your total TrueAchievement score.                                       |
+| **Completion %**       | Your global achievement completion rate.                                |
+| **Total Games**        | Total number of games started.                                          |
+| **Completed Games**    | Number of games finished with 100% achievements.                        |
+| **Total Achievements** | Total number of individual achievements unlocked.                       |
+| **Now Playing**        | Current game name with detailed attributes (Ratio, Hours played, etc.). |
+| **Auth Status**        | Binary sensor to alert if your Session Token has expired.               |
 
 ## FAQ
 
 ### ⚠️ Why do I need a TrueAchievements Pro account?
+
 TrueAchievements limits the automated export of game data (CSV export) to their **Pro members**. Since this integration relies on that specific feature to fetch your stats without scraping the website (which is against their TOS), a Pro subscription is mandatory.
 
 ### Where can I find my GamerID?
+
 Your **GamerID** is the number found in the URL when you visit your own profile on TrueAchievements:
 `https://www.trueachievements.com/gamer/YourName?gamerid=123456`
 In this example, the ID is `123456`.
 
 ### Where can I find my GamerToken? (Reliable Method)
+
 To ensure a successful connection, you should copy the full cookie string from your browser headers:
 
 1. Log in to [TrueAchievements](https://www.trueachievements.com) in your desktop browser.
@@ -92,11 +99,10 @@ To ensure a successful connection, you should copy the full cookie string from y
 8. Copy the **entire value** (a long string usually starting with `ASP.NET_SessionId=...`).
 9. Paste this full string into the **GamerToken** field in Home Assistant.
 
-
-
 ## Privacy & Security
 
 **Warning:** Your `GamerToken` is a sensitive piece of information that allows access to your TrueAchievements session.
+
 - This integration **never** sends your token to any third-party server.
 - The token is only used to communicate directly with `www.trueachievements.com` to download your CSV file.
 - It is stored securely within the Home Assistant internal configuration.
