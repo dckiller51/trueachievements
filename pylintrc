@@ -1,0 +1,47 @@
+[MASTER]
+ignore=tests
+jobs=2
+fail-on=useless-suppression
+fail-under=10.0
+persistent=no
+extension-pkg-whitelist=ciso8601,cv2
+
+[BASIC]
+good-names=i,j,k,ex,_,T,x,y,id
+
+[MESSAGES CONTROL]
+# These flags are disabled to align with Home Assistant development standards
+# and to avoid false positives caused by Python dataclasses or long URLs.
+disable=
+    format,                          # Handled by Black/Ruff
+    abstract-method,                 # Async methods often trigger this incorrectly
+    cyclic-import,                   # Does not account for conditional imports
+    duplicate-code,                  # Often unavoidable in platform definitions
+    inconsistent-return-statements,  # Does not handle 'raise' correctly
+    too-many-instance-attributes,    # Fixes R0902: Integration entities often exceed 7 attributes
+    wrong-import-order,              # Handled by isort/Ruff
+    too-few-public-methods,          # Standard for many simple HA entities
+    unexpected-keyword-arg,          # Fixes E1123: False positives on SensorEntityDescription
+    no-value-for-parameter,          # Fixes false positives with HA dataclasses
+    too-many-locals,                 # Allows complex CSV parsing in the coordinator (R0914)
+    wildcard-import,                 # Suppresses W0401 alerts
+    unused-wildcard-import,          # Suppresses W0614 alerts
+    line-too-long,                   # Ignore long TrueAchievements URLs (C0301)
+    missing-final-newline            # Prevents C0304 if a file lacks a trailing Enter
+
+enable=
+    useless-suppression,
+    use-symbolic-message-instead,
+
+[REPORTS]
+score=yes
+
+[REFACTORING]
+max-nested-blocks=5
+never-returning-functions=sys.exit,argparse.parse_error
+
+[FORMAT]
+expected-line-ending-format=LF
+
+[EXCEPTIONS]
+overgeneral-exceptions=builtins.BaseException,builtins.Exception

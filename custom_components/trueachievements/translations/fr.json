@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration TrueAchievements",
+        "description": "Entrez vos identifiants TrueAchievements. Vous pouvez trouver votre GamerID dans l'URL de votre profil et votre GamerToken dans vos cookies (TrueGamingIdentity).",
+        "data": {
+          "gamertag": "GamerTag Xbox",
+          "gamer_id": "ID de joueur (Gamer ID)",
+          "gamertoken": "Token de session (Cookie)",
+          "now_playing_entity": "Entité de suivi Xbox (Now Playing)",
+          "excluded_apps": "Applications à exclure (séparées par des virgules)",
+          "games_file": "Chemin du fichier CSV"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion au serveur",
+      "invalid_auth": "Authentification invalide (vérifiez votre token)",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "gamertoken": "Token de session (Cookie)",
+          "excluded_apps": "Applications à exclure",
+          "now_playing_entity": "Entité de suivi Xbox"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "gamerscore": {
+        "name": "Gamerscore"
+      },
+      "ta_score": {
+        "name": "Score TA"
+      },
+      "total_games": {
+        "name": "Total de jeux",
+        "unit_of_measurement": "jeux"
+      },
+      "completed_games": {
+        "name": "Jeux terminés",
+        "unit_of_measurement": "jeux"
+      },
+      "completion_percentage": {
+        "name": "Pourcentage de réussite"
+      },
+      "total_achievements": {
+        "name": "Succès totaux"
+      },
+      "now_playing": {
+        "name": "Jeu en cours",
+        "state": {
+          "offline_status": "Hors ligne"
+        },
+        "state_attributes": {
+          "achievements": { "name": "Succès" },
+          "gamerscore": { "name": "Points" },
+          "ta_score": { "name": "Points TA" },
+          "hours_played": { "name": "Heures de jeu" },
+          "game_completion": { "name": "Progression" },
+          "game_ratio": { "name": "Ratio" },
+          "game_url": { "name": "URL du jeux" },
+          "platform": { "name": "Plateforme" }
+        }
+      }
+    },
+    "binary_sensor": {
+      "auth_status": {
+        "name": "Statut de connexion TA"
+      }
+    }
+  }
+}
