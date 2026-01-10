@@ -23,6 +23,7 @@ from .const import (
     ATTR_TOTAL_GAMES,
     ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
+    VERSION,
 )
 
 if TYPE_CHECKING:
@@ -31,10 +32,12 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True, kw_only=True)
 class TrueAchievementsSensorDescription(SensorEntityDescription):
     """Description for TrueAchievements sensors."""
     value_fn: Callable[[dict[str, Any]], Any]
+
 
 # Numeric sensors definition
 SENSOR_TYPES: tuple[TrueAchievementsSensorDescription, ...] = (
@@ -85,6 +88,7 @@ SENSOR_TYPES: tuple[TrueAchievementsSensorDescription, ...] = (
     ),
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -101,6 +105,7 @@ async def async_setup_entry(
     entities.append(TANowPlayingSensor(coordinator))
 
     async_add_entities(entities)
+
 
 class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity):
     """General TrueAchievements sensor representation."""
@@ -122,12 +127,14 @@ class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], S
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
+            "sw_version": VERSION,
         }
 
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
         return self.entity_description.value_fn(self.coordinator.data)
+
 
 class TANowPlayingSensor(CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity):
     """Now Playing sensor with game image and platform details."""

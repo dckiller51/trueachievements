@@ -29,7 +29,8 @@ from .const import (
     ATTR_TOTAL_GAMES,
     ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
-    ATTR_COMPLETION_PCT
+    ATTR_COMPLETION_PCT,
+    GAME_NAME_MAPPING
 )
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching data from TrueAchievements."""
@@ -58,17 +60,14 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.session: ClientSession = session
         self.auth_failed: bool = False
 
-        # Attributes initialized in _update_local_config
         self.gamer_id: str = ""
         self.gamer_tag: str = ""
         self.gamer_token: str = ""
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
 
-        # Initial configuration load
         self._update_local_config()
 
-        # Track Xbox Now Playing entity
         now_playing_eid: str | None = entry.options.get(
             CONF_NOW_PLAYING_ENTITY,
             entry.data.get(CONF_NOW_PLAYING_ENTITY)
@@ -183,6 +182,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         total_gs, total_ta, total_ach, max_ach, completed, started = 0, 0, 0, 0, 0, 0
         current_game_stats: dict[str, Any] = {}
 
+        # Apply name mapping (Game Dictionary) for the Xbox entity status
+        lookup_name = current_game_name
+        if current_game_name in GAME_NAME_MAPPING:
+            lookup_name = GAME_NAME_MAPPING[current_game_name]
+            _LOGGER.debug("Mapping applied: '%s' -> '%s'", current_game_name, lookup_name)
+
         if not self.games_file.exists():
             _LOGGER.warning("CSV file not found at %s", self.games_file)
             return {}
@@ -204,10 +209,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             for row in reader:
                 row = {k: (v.replace('"', '').strip() if v else "") for k, v in row.items()}
-                name = row.get("Game name", "")
+                name_in_csv = row.get("Game name", "")
                 plat = row.get("Platform", "")
 
-                if "app" in plat.lower() or any(x in name.lower() for x in self.excluded_apps):
+                if "app" in plat.lower() or any(x in name_in_csv.lower() for x in self.excluded_apps):
                     continue
 
                 gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
@@ -215,21 +220,16 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
                 ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
 
-                if current_game_name and current_game_name.lower() == name.lower():
+                # Comparison using the corrected name (lookup_name)
+                if lookup_name and lookup_name.lower() == name_in_csv.lower():
                     completion_raw = row.get("My Completion Percentage", "0")
                     completion_display = (
-                        completion_raw
-                        if "%" in str(completion_raw)
-                        else f"{completion_raw}%"
+                        completion_raw if "%" in str(completion_raw) else f"{completion_raw}%"
                     )
 
                     game_url = row.get("Game URL") or row.get("URL") or "N/A"
                     raw_hours = str(row.get("Hours Played", "0")).strip()
-                    hours_display = (
-                        f"{raw_hours} h"
-                        if raw_hours not in ("N/A", "0")
-                        else "0 h"
-                    )
+                    hours_display = f"{raw_hours} h" if raw_hours not in ("N/A", "0") else "0 h"
 
                     current_game_stats = {
                         "platform": plat,
@@ -257,9 +257,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ATTR_TOTAL_GAMES: started,
             ATTR_COMPLETED_GAMES: completed,
             ATTR_TOTAL_ACHIEVEMENTS: total_ach,
-            ATTR_COMPLETION_PCT: (
-                round((total_ach / max_ach * 100), 2) if max_ach > 0 else 0
-            ),
+            ATTR_COMPLETION_PCT: round((total_ach / max_ach * 100), 2) if max_ach > 0 else 0,
             "current_game_name": current_game_name or "offline_status",
             "current_game_details": current_game_stats
         }

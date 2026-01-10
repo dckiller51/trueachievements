@@ -16,15 +16,17 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_AUTH_STATUS
+from .const import DOMAIN, CONF_AUTH_STATUS, VERSION
 
 if TYPE_CHECKING:
     from .coordinator import TrueAchievementsCoordinator
+
 
 @dataclass(frozen=True, kw_only=True)
 class TABinarySensorEntityDescription(BinarySensorEntityDescription):
     """Description for TrueAchievements binary sensors."""
     is_on_fn: Callable[[TrueAchievementsCoordinator], bool]
+
 
 BINARY_SENSOR_DESCRIPTIONS: tuple[TABinarySensorEntityDescription, ...] = (
     TABinarySensorEntityDescription(
@@ -34,6 +36,7 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[TABinarySensorEntityDescription, ...] = (
         is_on_fn=lambda coordinator: bool(coordinator.auth_failed),
     ),
 )
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -45,6 +48,7 @@ async def async_setup_entry(
     async_add_entities(
         [TABinarySensorEntity(coordinator, desc) for desc in BINARY_SENSOR_DESCRIPTIONS]
     )
+
 
 class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], BinarySensorEntity):
     """Representation of a TrueAchievements binary sensor."""
@@ -64,6 +68,7 @@ class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], Bin
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
+            "sw_version": VERSION,
         }
 
     @property
