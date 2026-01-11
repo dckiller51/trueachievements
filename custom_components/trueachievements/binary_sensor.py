@@ -16,7 +16,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_AUTH_STATUS, VERSION
+from .const import (
+    DOMAIN,
+    CONF_AUTH_STATUS,
+    VERSION,
+)
 
 if TYPE_CHECKING:
     from .coordinator import TrueAchievementsCoordinator
@@ -45,9 +49,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TrueAchievements binary sensor platform."""
     coordinator: TrueAchievementsCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [TABinarySensorEntity(coordinator, desc) for desc in BINARY_SENSOR_DESCRIPTIONS]
-    )
+
+    entities = [TABinarySensorEntity(coordinator, desc) for desc in BINARY_SENSOR_DESCRIPTIONS]
+
+    async_add_entities(entities)
 
 
 class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], BinarySensorEntity):
@@ -65,6 +70,9 @@ class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], Bin
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_{description.key}"
+        self.entity_id = f"binary_sensor.ta_{coordinator.gamer_tag.lower()}_{description.key}"
+        self._attr_translation_key = description.key
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",

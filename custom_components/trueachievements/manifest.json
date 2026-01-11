@@ -3,10 +3,10 @@
   "name": "TrueAchievements",
   "codeowners": ["@dckiller51"],
   "config_flow": true,
-  "iot_class": "cloud_polling",
-  "version": "2026.1.2",
+  "dependencies": ["persistent_notification"],
   "documentation": "https://github.com/dckiller51/trueachievements",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/dckiller51/trueachievements/issues",
   "requirements": [],
-  "dependencies": ["persistent_notification"]
+  "version": "2026.1.4"
 }

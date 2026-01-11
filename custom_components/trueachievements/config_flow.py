@@ -14,6 +14,7 @@ from .const import (
     CONF_NOW_PLAYING_ENTITY, CONF_EXCLUDED_APPS, CONF_GAMES_FILE, DEFAULT_GAMES_FILE
 )
 
+
 class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for TrueAchievements."""
 
@@ -37,8 +38,11 @@ class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_GAMERTAG): str,
                 vol.Required(CONF_GAMER_ID): str,
                 vol.Required(CONF_GAMERTOKEN): str,
-                vol.Required(CONF_NOW_PLAYING_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
+                vol.Optional(CONF_NOW_PLAYING_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        integration="xbox",
+                        domain="sensor"
+                    )
                 ),
                 vol.Optional(CONF_EXCLUDED_APPS, default=""): str,
                 vol.Required(CONF_GAMES_FILE, default=DEFAULT_GAMES_FILE): str,
@@ -52,6 +56,7 @@ class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> TrueAchievementsOptionsFlowHandler:
         """Get the options flow for this handler."""
         return TrueAchievementsOptionsFlowHandler()
+
 
 class TrueAchievementsOptionsFlowHandler(OptionsFlow):
     """Handle TrueAchievements options."""
@@ -72,11 +77,21 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
             CONF_EXCLUDED_APPS,
             self.config_entry.data.get(CONF_EXCLUDED_APPS, "")
         )
+        current_now_playing = self.config_entry.options.get(
+            CONF_NOW_PLAYING_ENTITY,
+            self.config_entry.data.get(CONF_NOW_PLAYING_ENTITY)
+        )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required(CONF_GAMERTOKEN, default=token): str,
+                vol.Optional(CONF_NOW_PLAYING_ENTITY, default=current_now_playing): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        integration="xbox",
+                        domain="sensor"
+                    )
+                ),
                 vol.Optional(CONF_EXCLUDED_APPS, default=excluded): str,
             })
         )
