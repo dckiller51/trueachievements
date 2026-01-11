@@ -4,8 +4,9 @@
   "codeowners": ["@dckiller51"],
   "config_flow": true,
   "iot_class": "cloud_polling",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "documentation": "https://github.com/dckiller51/trueachievements",
+  "issue_tracker": "https://github.com/dckiller51/trueachievements/issues",
   "requirements": [],
   "dependencies": ["persistent_notification"]
 }

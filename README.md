@@ -99,6 +99,16 @@ To ensure a successful connection, you should copy the full cookie string from y
 8. Copy the **entire value** (a long string usually starting with `ASP.NET_SessionId=...`).
 9. Paste this full string into the **GamerToken** field in Home Assistant.
 
+### Why is my current game showing "Offline" or missing details?
+
+This usually happens when the name provided by the Xbox integration doesn't perfectly match the name in the TrueAchievements database (e.g., "Roblox - Xbox" vs "ROBLOX").
+
+1. **Check your notifications:** Home Assistant will alert you if a mismatch is detected.
+2. **Report the mismatch:** Open a request on our [Game Mapping Issue](https://github.com/dckiller51/trueachievements/issues/2).
+3. **Include details:** Provide the exact name shown in Home Assistant and the one on TrueAchievements.
+
+We regularly update the internal dictionary to fix these naming inconsistencies.
+
 ## Privacy & Security
 
 **Warning:** Your `GamerToken` is a sensitive piece of information that allows access to your TrueAchievements session.
