@@ -4,12 +4,19 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.1.3
+
+- **Improved** Configuration Flow: The "Now Playing" Xbox entity is now optional. You can also update or add this entity at any time via the Integration Options without reinstalling.
+
+- **Improved** Entity Selector: Added a dedicated filter to the configuration UI that only shows Xbox integration sensors, making it easier to find your console
+- **Fixed** Entity Naming: Standardized entity_id to English (e.g., total_games instead of total_de_jeux) to follow Home Assistant best practices and ensure automation stability.
+
 ## 2026.1.2
 
 - **Added** Global Mapping Issue: Added a dedicated [GitHub Issue]({ISSUE_URL}) to report missing game name mappings.
 - **Added** Automated Notifications: The integration now notifies you via Home Assistant if a game name mismatch is detected, providing a direct link to report it.
 - **Fixed** Game matching: Updated `GAME_NAME_MAPPING` to correct the inconsistency for **Roblox**.
-- **Fixed\*** Stability: Fixed a thread-safety issue where notifications could cause the integration to crash during CSV processing.
+- **Fixed** Stability: Fixed a thread-safety issue where notifications could cause the integration to crash during CSV processing.
 
 ## 2026.1.1
 

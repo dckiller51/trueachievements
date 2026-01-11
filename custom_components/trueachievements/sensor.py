@@ -23,6 +23,7 @@ from .const import (
     ATTR_TOTAL_GAMES,
     ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
+    CONF_NOW_PLAYING_ENTITY,
     VERSION,
 )
 
@@ -102,7 +103,16 @@ async def async_setup_entry(
     for description in SENSOR_TYPES:
         entities.append(TrueAchievementsSensor(coordinator, description))
 
-    entities.append(TANowPlayingSensor(coordinator))
+    now_playing_source = entry.options.get(
+        CONF_NOW_PLAYING_ENTITY,
+        entry.data.get(CONF_NOW_PLAYING_ENTITY)
+    )
+
+    if now_playing_source:
+        _LOGGER.debug("Xbox entity found: %s. Adding Now Playing sensor.", now_playing_source)
+        entities.append(TANowPlayingSensor(coordinator))
+    else:
+        _LOGGER.info("No Xbox entity selected. Now Playing sensor will not be created.")
 
     async_add_entities(entities)
 
@@ -122,6 +132,7 @@ class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], S
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_{description.key}"
+        self.entity_id = f"sensor.ta_{coordinator.gamer_tag.lower()}_{description.key}"
         self._attr_translation_key = description.translation_key
 
         self._attr_device_info = {
@@ -146,10 +157,12 @@ class TANowPlayingSensor(CoordinatorEntity["TrueAchievementsCoordinator"], Senso
         super().__init__(coordinator)
         self._attr_translation_key = "now_playing"
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_now_playing"
+        self.entity_id = f"sensor.ta_{coordinator.gamer_tag.lower()}_now_playing"
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
+            "sw_version": VERSION,
         }
 
     @property
