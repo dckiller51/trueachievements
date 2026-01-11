@@ -24,6 +24,7 @@ from .const import (
     CONF_GAMES_FILE,
     DEFAULT_GAMES_FILE,
     URL_EXPORT_COLLECTION,
+    ISSUE_URL_MAPPING,
     ATTR_GAMERSCORE,
     ATTR_TA_SCORE,
     ATTR_TOTAL_GAMES,
@@ -59,6 +60,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry: ConfigEntry = entry
         self.session: ClientSession = session
         self.auth_failed: bool = False
+        self._notified_games: set[str] = set()  # Prevents notification spam
 
         self.gamer_id: str = ""
         self.gamer_tag: str = ""
@@ -146,16 +148,15 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _send_error_notification(self) -> None:
         """Send a system notification when the session token expires."""
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "message": f"The cookie for **{self.gamer_tag}** has expired.",
-                    "title": "TrueAchievements: Cookie Expired",
-                    "notification_id": "ta_cookie_expired",
-                },
-            )
+        self.hass.add_job(
+            self.hass.services.async_call,
+            "persistent_notification",
+            "create",
+            {
+                "message": f"The cookie for **{self.gamer_tag}** has expired.",
+                "title": "TrueAchievements: Cookie Expired",
+                "notification_id": "ta_cookie_expired",
+            }
         )
 
     def get_game_info_local(self) -> dict[str, Any] | None:
@@ -182,7 +183,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         total_gs, total_ta, total_ach, max_ach, completed, started = 0, 0, 0, 0, 0, 0
         current_game_stats: dict[str, Any] = {}
 
-        # Apply name mapping (Game Dictionary) for the Xbox entity status
         lookup_name = current_game_name
         if current_game_name in GAME_NAME_MAPPING:
             lookup_name = GAME_NAME_MAPPING[current_game_name]
@@ -220,7 +220,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
                 ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
 
-                # Comparison using the corrected name (lookup_name)
                 if lookup_name and lookup_name.lower() == name_in_csv.lower():
                     completion_raw = row.get("My Completion Percentage", "0")
                     completion_display = (
@@ -239,7 +238,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "hours_played": hours_display,
                         "game_completion": completion_display,
                         "game_ratio": row.get("My Ratio", "1.00"),
-                        "game_url": game_url,
+                        "game_url": game_url
                     }
 
                 if ach_won > 0:
@@ -250,6 +249,25 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     started += 1
                     if ach_won >= ach_max > 0:
                         completed += 1
+
+        # MISSING MATCH NOTIFICATION LOGIC
+        if lookup_name and not current_game_stats:
+            if lookup_name not in self._notified_games:
+                _LOGGER.warning("Game matching needed: '%s' not found in TA CSV", lookup_name)
+
+                self.hass.add_job(
+                    self.hass.services.async_call,
+                    "persistent_notification",
+                    "create",
+                    {
+                        "title": "TrueAchievements: Action Required",
+                        "message": (
+                            f"The game **{lookup_name}** is not matching your TA collection.\n\n"
+                            f"Please [report it here]({ISSUE_URL_MAPPING}) to get it fixed!"
+                        ),
+                        "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
+                    }
+                )
 
         return {
             ATTR_GAMERSCORE: total_gs,

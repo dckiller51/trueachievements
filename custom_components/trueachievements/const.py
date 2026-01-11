@@ -2,9 +2,11 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.1.1"
+VERSION = "2026.1.2"
 
+# GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
+ISSUE_URL_MAPPING = "https://github.com/dckiller51/trueachievements/issues/1"
 
 # Configuration keys
 CONF_AUTH_STATUS = "auth_status"
@@ -37,7 +39,8 @@ ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
 # and how games are indexed in the TA CSV export.
 GAME_NAME_MAPPING = {
 
-    "Minecraft for Android": "Minecraft (Android)"
+    "Minecraft for Android": "Minecraft (Android)",
+    "Roblox - Xbox": "ROBLOX"
 }
 
 STARTUP_MESSAGE = f"""
