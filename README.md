@@ -30,18 +30,13 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 
 ## Installation
 
-### Via HACS (Manual Custom Repository)
-
-> [!NOTE]
-> Official inclusion in the HACS default list is **coming soon**. In the meantime, you can easily add it manually.
+### Via HACS (Recommended)
 
 1. Open **HACS** in Home Assistant.
-2. Go to the **Integrations** section.
-3. Click the **three dots** in the top right corner and select **Custom repositories**.
-4. Paste the following URL: `https://github.com/dckiller51/trueachievements`
-5. Select **Integration** as the category and click **Add**.
-6. You can now find "TrueAchievements" in the HACS store, click **Install**.
-7. Restart Home Assistant.
+2. Search for **"TrueAchievements"** using the top search bar.
+3. Click on the **TrueAchievements** integration that appears.
+4. Click **Download** in the bottom right corner.
+5. **Restart** Home Assistant.
 
 ### Manual Installation
 
