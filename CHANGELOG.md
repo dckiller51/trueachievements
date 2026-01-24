@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.1.4
+
+- **Added** Anti-Ban Security Lock: Implemented a 24-hour physical file-age check. The integration now strictly limits TrueAchievements server requests to once per day, regardless of Home Assistant restarts.
+
+- **Added** Dynamic Status Attributes: Added last_update attribute to both the "Now Playing" sensor and "Connection Status" binary sensor to track data freshness.
+
+- **Improved** Resilience: Added a content validation check to prevent overwriting local data with empty or invalid (HTML) responses during network errors or Cloudflare challenges.
+
+- **Fixed** Indentation & Stability: Resolved an IndentationError in the binary sensor platform and improved error logging for authentication failures.
+
 ## 2026.1.3
 
 - **Improved** Configuration Flow: The "Now Playing" Xbox entity is now optional. You can also update or add this entity at any time via the Integration Options without reinstalling.
