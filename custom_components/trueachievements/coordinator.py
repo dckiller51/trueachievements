@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -12,8 +13,9 @@ from typing import Any, TYPE_CHECKING
 from aiohttp import ClientTimeout
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN, CONF_GAMER_ID,
@@ -42,7 +44,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Class to manage fetching data from TrueAchievements."""
+    """Class to manage fetching data from TrueAchievements with Anti-Ban safety."""
 
     def __init__(
         self,
@@ -60,7 +62,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry: ConfigEntry = entry
         self.session: ClientSession = session
         self.auth_failed: bool = False
-        self._notified_games: set[str] = set()  # Prevents notification spam
+        self.last_valid_update: str = "Unknown"
+        self._notified_games: set[str] = set()
 
         self.gamer_id: str = ""
         self.gamer_tag: str = ""
@@ -83,7 +86,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch settings from data or options entries."""
         opts = self.entry.options
         dat = self.entry.data
-
         self.gamer_id = str(dat.get(CONF_GAMER_ID, ""))
         self.gamer_tag = str(dat.get(CONF_GAMERTAG, ""))
         self.gamer_token = str(opts.get(CONF_GAMERTOKEN, dat.get(CONF_GAMERTOKEN, "")))
@@ -102,60 +104,96 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_request_refresh()
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch and process data from TrueAchievements."""
+        """Fetch data from TA with 24h safety lock or use local CSV."""
         self._update_local_config()
+        now = dt_util.now()
+        should_download = True
 
-        if self.auth_failed:
-            raise UpdateFailed("Token expired. Update it in settings.")
+        # --- 24H CACHE LOGIC ---
+        if self.games_file.exists():
+            mtime = os.path.getmtime(self.games_file)
+            last_modified = dt_util.as_local(dt_util.utc_from_timestamp(mtime))
+            self.last_valid_update = last_modified.strftime("%Y-%m-%d %H:%M")
 
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Cookie": f"TrueGamingIdentity={self.gamer_token}",
-            "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
-        }
+            if (now - last_modified) < timedelta(hours=24):
+                should_download = False
+                _LOGGER.debug("Local CSV is fresh (less than 24h old)")
 
-        try:
-            url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
-            async with self.session.get(
-                url_csv,
-                headers=headers,
-                timeout=ClientTimeout(total=15)
-            ) as resp:
-                if resp.status == 200:
-                    self.auth_failed = False
-                    content = await resp.read()
-                    await self.hass.async_add_executor_job(self._write_file, content)
-                elif resp.status in (401, 403):
-                    self.auth_failed = True
-                    self._send_error_notification()
-                    raise UpdateFailed("Access denied by TrueAchievements (Invalid Token)")
+        if should_download and not self.auth_failed:
+            _LOGGER.info("Attempting daily update from TrueAchievements...")
+            headers = {
+                "User-Agent": "Mozilla/5.0",
+                "Cookie": f"TrueGamingIdentity={self.gamer_token}",
+                "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
+            }
 
-            game_info = self.get_game_info_local()
-            return await self.hass.async_add_executor_job(
-                self._read_and_process_csv,
-                game_info["name"] if game_info else None
-            )
-        except Exception as e:
-            if not isinstance(e, UpdateFailed):
-                _LOGGER.error("Error updating TrueAchievements: %s", e)
-                raise UpdateFailed(f"Update error: {e}") from e
-            raise e
+            try:
+                url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
+                async with self.session.get(
+                    url_csv,
+                    headers=headers,
+                    timeout=ClientTimeout(total=20)
+                ) as resp:
+
+                    if resp.status == 200:
+                        content = await resp.read()
+                        # STRICT CONTENT CHECK: Ensure it's a real CSV with headers
+                        if len(content) > 1000 and b"Game name" in content:
+                            await self.hass.async_add_executor_job(self._write_file, content)
+                            self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
+                            self.auth_failed = False  # Reset binary sensor to OFF (Normal)
+                            _LOGGER.info("CSV updated successfully")
+                        else:
+                            # Received 200 OK but content is not CSV (e.g., login page)
+                            _LOGGER.error("Invalid CSV content received (Cookie probably expired)")
+                            self.auth_failed = True  # This turns your binary_sensor ON (Problem)
+                            self._send_error_notification()
+
+                    elif resp.status in (401, 403):
+                        _LOGGER.error("TA Authentication error (Status: %s)", resp.status)
+                        self.auth_failed = True  # This turns your binary_sensor ON (Problem)
+                        self._send_error_notification()
+
+                        # ANTI-BAN SAFETY: Touch the file even on failure to wait 24h
+                        if self.games_file.exists():
+                            await self.hass.async_add_executor_job(os.utime, self.games_file, None)
+
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.error("Network error during update: %s", err)
+
+        # Always process local data
+        game_info = self.get_game_info_local()
+        raw_game_name = (game_info or {}).get("name")
+        game_image = (game_info or {}).get("image")
+
+        data = await self.hass.async_add_executor_job(
+            self._read_and_process_csv,
+            raw_game_name
+        )
+
+        if "current_game_details" not in data or not data["current_game_details"]:
+            data["current_game_details"] = {}
+
+        data["current_game_details"]["entity_picture"] = game_image
+
+        data["last_update"] = self.last_valid_update
+        return data
 
     def _write_file(self, content: bytes) -> None:
-        """Physically save the CSV file to disk."""
+        """Physically save the CSV file."""
         self.games_file.parent.mkdir(parents=True, exist_ok=True)
         self.games_file.write_bytes(content)
 
     def _send_error_notification(self) -> None:
-        """Send a system notification when the session token expires."""
+        """Notification for expired token."""
         self.hass.add_job(
             self.hass.services.async_call,
             "persistent_notification",
             "create",
             {
                 "message": f"The cookie for **{self.gamer_tag}** has expired.",
-                "title": "TrueAchievements: Cookie Expired",
-                "notification_id": "ta_cookie_expired",
+                "title": "TrueAchievements: Access Error",
+                "notification_id": "ta_access_error",
             }
         )
 
@@ -179,95 +217,81 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return None
 
     def _read_and_process_csv(self, current_game_name: str | None) -> dict[str, Any]:
-        """Parse the CSV and extract global and per-game statistics."""
+        """Parse the local CSV file and calculate statistics."""
         total_gs, total_ta, total_ach, max_ach, completed, started = 0, 0, 0, 0, 0, 0
         current_game_stats: dict[str, Any] = {}
 
-        lookup_name = current_game_name
-        if current_game_name in GAME_NAME_MAPPING:
-            lookup_name = GAME_NAME_MAPPING[current_game_name]
-            _LOGGER.debug("Mapping applied: '%s' -> '%s'", current_game_name, lookup_name)
+        lookup_name: str | None = current_game_name
+        if current_game_name is not None:
+            lookup_name = GAME_NAME_MAPPING.get(current_game_name, current_game_name)
 
         if not self.games_file.exists():
-            _LOGGER.warning("CSV file not found at %s", self.games_file)
             return {}
 
-        with open(self.games_file, mode="r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            if not reader.fieldnames:
-                return {}
+        try:
+            with open(self.games_file, mode="r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames:
+                    return {}
+                reader.fieldnames = [n.replace('"', '').strip() for n in reader.fieldnames]
 
-            reader.fieldnames = [n.replace('"', '').strip() for n in reader.fieldnames]
+                def s_int(val: Any) -> int:
+                    try:
+                        clean_v = re.sub(r'[^\d]', '', str(val))
+                        return int(clean_v) if clean_v else 0
+                    except (ValueError, TypeError):
+                        return 0
 
-            def s_int(v: Any) -> int:
-                """Safely convert string to integer."""
-                try:
-                    clean_v = re.sub(r'[^\d]', '', str(v))
-                    return int(clean_v) if clean_v else 0
-                except (ValueError, TypeError):
-                    return 0
+                for row in reader:
+                    row = {k: (str(v).replace('"', '').strip() if v else "") for k, v in row.items()}
+                    name_in_csv = row.get("Game name", "")
+                    plat = row.get("Platform", "")
 
-            for row in reader:
-                row = {k: (v.replace('"', '').strip() if v else "") for k, v in row.items()}
-                name_in_csv = row.get("Game name", "")
-                plat = row.get("Platform", "")
+                    if "app" in plat.lower() or any(x in name_in_csv.lower() for x in self.excluded_apps):
+                        continue
 
-                if "app" in plat.lower() or any(x in name_in_csv.lower() for x in self.excluded_apps):
-                    continue
+                    gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
+                    ta_won = s_int(row.get("TrueAchievement Won (incl. DLC)"))
+                    ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
+                    ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
 
-                gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
-                ta_won = s_int(row.get("TrueAchievement Won (incl. DLC)"))
-                ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
-                ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
+                    if lookup_name and lookup_name.lower() == name_in_csv.lower():
+                        current_game_stats = {
+                            "name": current_game_name,
+                            "platform": plat,
+                            "achievements": f"{ach_won} / {ach_max}",
+                            "gamerscore": f"{gs_won} G",
+                            "ta_score": f"{ta_won} TA",
+                            "hours_played": f"{row.get('Hours Played', '0')} h",
+                            "game_completion": f"{row.get('My Completion Percentage', '0')}%",
+                            "game_ratio": row.get("My Ratio", "1.00"),
+                            "game_url": row.get("Game URL") or row.get("URL") or "N/A"
+                        }
 
-                if lookup_name and lookup_name.lower() == name_in_csv.lower():
-                    completion_raw = row.get("My Completion Percentage", "0")
-                    completion_display = (
-                        completion_raw if "%" in str(completion_raw) else f"{completion_raw}%"
-                    )
+                    if ach_won > 0:
+                        total_gs += gs_won
+                        total_ta += ta_won
+                        total_ach += ach_won
+                        max_ach += ach_max
+                        started += 1
+                        if ach_won >= ach_max > 0:
+                            completed += 1
 
-                    game_url = row.get("Game URL") or row.get("URL") or "N/A"
-                    raw_hours = str(row.get("Hours Played", "0")).strip()
-                    hours_display = f"{raw_hours} h" if raw_hours not in ("N/A", "0") else "0 h"
-
-                    current_game_stats = {
-                        "platform": plat,
-                        "achievements": f"{ach_won} / {ach_max}",
-                        "gamerscore": f"{gs_won}G",
-                        "ta_score": f"{ta_won} TA",
-                        "hours_played": hours_display,
-                        "game_completion": completion_display,
-                        "game_ratio": row.get("My Ratio", "1.00"),
-                        "game_url": game_url
-                    }
-
-                if ach_won > 0:
-                    total_gs += gs_won
-                    total_ta += ta_won
-                    total_ach += ach_won
-                    max_ach += ach_max
-                    started += 1
-                    if ach_won >= ach_max > 0:
-                        completed += 1
-
-        # MISSING MATCH NOTIFICATION LOGIC
-        if lookup_name and not current_game_stats:
-            if lookup_name not in self._notified_games:
-                _LOGGER.warning("Game matching needed: '%s' not found in TA CSV", lookup_name)
-
+            if lookup_name and not current_game_stats and lookup_name not in self._notified_games:
+                self._notified_games.add(lookup_name)
                 self.hass.add_job(
                     self.hass.services.async_call,
                     "persistent_notification",
                     "create",
                     {
                         "title": "TrueAchievements: Action Required",
-                        "message": (
-                            f"The game **{lookup_name}** is not matching your TA collection.\n\n"
-                            f"Please [report it here]({ISSUE_URL_MAPPING}) to get it fixed!"
-                        ),
+                        "message": f"Game **{lookup_name}** not matching. [Report here]({ISSUE_URL_MAPPING})",
                         "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
                     }
                 )
+
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Error reading CSV: %s", err)
 
         return {
             ATTR_GAMERSCORE: total_gs,

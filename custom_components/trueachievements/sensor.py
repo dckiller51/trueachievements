@@ -24,7 +24,6 @@ from .const import (
     ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
     CONF_NOW_PLAYING_ENTITY,
-    VERSION,
 )
 
 if TYPE_CHECKING:
@@ -132,13 +131,11 @@ class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], S
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_{description.key}"
-        self.entity_id = f"sensor.ta_{coordinator.gamer_tag.lower()}_{description.key}"
         self._attr_translation_key = description.translation_key
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
-            "sw_version": VERSION,
         }
 
     @property
@@ -157,12 +154,10 @@ class TANowPlayingSensor(CoordinatorEntity["TrueAchievementsCoordinator"], Senso
         super().__init__(coordinator)
         self._attr_translation_key = "now_playing"
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_now_playing"
-        self.entity_id = f"sensor.ta_{coordinator.gamer_tag.lower()}_now_playing"
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
-            "sw_version": VERSION,
         }
 
     @property
@@ -188,8 +183,12 @@ class TANowPlayingSensor(CoordinatorEntity["TrueAchievementsCoordinator"], Senso
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return details like Platform, Achievements, URL, etc."""
+        """Return details like Platform, Achievements, URL, and last update."""
         details = self.coordinator.data.get("current_game_details")
+
+        attrs = {}
         if isinstance(details, dict):
-            return details
-        return {}
+            attrs.update(details)
+
+        attrs["last_update"] = self.coordinator.data.get("last_update")
+        return attrs

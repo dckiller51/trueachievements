@@ -69,13 +69,17 @@
           "game_completion": { "name": "Progression" },
           "game_ratio": { "name": "Ratio" },
           "game_url": { "name": "Game URL" },
-          "platform": { "name": "Plateform" }
+          "platform": { "name": "Plateform" },
+          "last_update": { "name": "Last CSV Update" }
         }
       }
     },
     "binary_sensor": {
       "auth_status": {
-        "name": "TA Auth Status"
+        "name": "TA Auth Status",
+        "state_attributes": {
+          "last_update": { "name": "Last Sync Attempt" }
+        }
       }
     }
   }

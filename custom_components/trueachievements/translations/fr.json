@@ -68,14 +68,18 @@
           "hours_played": { "name": "Heures de jeu" },
           "game_completion": { "name": "Progression" },
           "game_ratio": { "name": "Ratio" },
-          "game_url": { "name": "URL du jeux" },
-          "platform": { "name": "Plateforme" }
+          "game_url": { "name": "URL du jeu" },
+          "platform": { "name": "Plateforme" },
+          "last_update": { "name": "Dernière MAJ CSV" }
         }
       }
     },
     "binary_sensor": {
       "auth_status": {
-        "name": "Statut de connexion TA"
+        "name": "Statut de connexion TA",
+        "state_attributes": {
+          "last_update": { "name": "Dernière tentative de synchro" }
+        }
       }
     }
   }

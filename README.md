@@ -73,6 +73,12 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 | **Now Playing**        | Current game name with detailed attributes (Ratio, Hours played, etc.). |
 | **Auth Status**        | Binary sensor to alert if your Session Token has expired.               |
 
+## Screenshots
+
+|                   Global Stats                    |                 Now Playing Detail                 |
+| :-----------------------------------------------: | :------------------------------------------------: |
+| ![Global Stats](./screenshots/dashboard_full.png) | ![Now Playing](./screenshots/now_playing_card.png) |
+
 ## FAQ
 
 ### ⚠️ Why do I need a TrueAchievements Pro account?

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -19,7 +19,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     CONF_AUTH_STATUS,
-    VERSION,
 )
 
 if TYPE_CHECKING:
@@ -70,13 +69,11 @@ class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], Bin
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_{description.key}"
-        self.entity_id = f"binary_sensor.ta_{coordinator.gamer_tag.lower()}_{description.key}"
         self._attr_translation_key = description.key
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
-            "sw_version": VERSION,
         }
 
     @property
@@ -88,3 +85,10 @@ class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], Bin
     def available(self) -> bool:
         """Keep the sensor available even if auth fails to show the problem state."""
         return True
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        return {
+            "last_update": self.coordinator.data.get("last_update"),
+        }

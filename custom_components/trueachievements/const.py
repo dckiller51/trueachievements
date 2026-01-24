@@ -2,11 +2,11 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.1.3"
+VERSION = "2026.1.4"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
-ISSUE_URL_MAPPING = "https://github.com/dckiller51/trueachievements/issues/1"
+ISSUE_URL_MAPPING = "https://github.com/dckiller51/trueachievements/issues/2"
 
 # Configuration keys
 CONF_AUTH_STATUS = "auth_status"
@@ -40,6 +40,7 @@ ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
 GAME_NAME_MAPPING = {
 
     "Minecraft for Android": "Minecraft (Android)",
+    "Minecraft for Kindle Fire": "Minecraft (Kindle Fire)",
     "Roblox - Xbox": "ROBLOX"
 }
 
