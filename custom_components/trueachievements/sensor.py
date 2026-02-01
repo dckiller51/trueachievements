@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -16,18 +17,19 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    DOMAIN,
+    ATTR_COMPLETED_GAMES,
+    ATTR_COMPLETION_PCT,
     ATTR_GAMERSCORE,
     ATTR_TA_SCORE,
-    ATTR_COMPLETION_PCT,
-    ATTR_TOTAL_GAMES,
-    ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
+    ATTR_TOTAL_GAMES,
     CONF_NOW_PLAYING_ENTITY,
+    DOMAIN,
 )
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
+
     from .coordinator import TrueAchievementsCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class TrueAchievementsSensorDescription(SensorEntityDescription):
     """Description for TrueAchievements sensors."""
+
     value_fn: Callable[[dict[str, Any]], Any]
 
 
@@ -90,9 +93,7 @@ SENSOR_TYPES: tuple[TrueAchievementsSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the TrueAchievements sensor platform."""
     coordinator: TrueAchievementsCoordinator = hass.data[DOMAIN][entry.entry_id]
@@ -103,12 +104,13 @@ async def async_setup_entry(
         entities.append(TrueAchievementsSensor(coordinator, description))
 
     now_playing_source = entry.options.get(
-        CONF_NOW_PLAYING_ENTITY,
-        entry.data.get(CONF_NOW_PLAYING_ENTITY)
+        CONF_NOW_PLAYING_ENTITY, entry.data.get(CONF_NOW_PLAYING_ENTITY)
     )
 
     if now_playing_source:
-        _LOGGER.debug("Xbox entity found: %s. Adding Now Playing sensor.", now_playing_source)
+        _LOGGER.debug(
+            "Xbox entity found: %s. Adding Now Playing sensor.", now_playing_source
+        )
         entities.append(TANowPlayingSensor(coordinator))
     else:
         _LOGGER.info("No Xbox entity selected. Now Playing sensor will not be created.")
@@ -116,7 +118,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity):
+class TrueAchievementsSensor(
+    CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity
+):
     """General TrueAchievements sensor representation."""
 
     entity_description: TrueAchievementsSensorDescription
@@ -125,7 +129,7 @@ class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], S
     def __init__(
         self,
         coordinator: TrueAchievementsCoordinator,
-        description: TrueAchievementsSensorDescription
+        description: TrueAchievementsSensorDescription,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -144,7 +148,9 @@ class TrueAchievementsSensor(CoordinatorEntity["TrueAchievementsCoordinator"], S
         return self.entity_description.value_fn(self.coordinator.data)
 
 
-class TANowPlayingSensor(CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity):
+class TANowPlayingSensor(
+    CoordinatorEntity["TrueAchievementsCoordinator"], SensorEntity
+):
     """Now Playing sensor with game image and platform details."""
 
     _attr_has_entity_name = True

@@ -8,32 +8,32 @@ import os
 import re
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientTimeout
-
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN, CONF_GAMER_ID,
-    CONF_GAMERTAG,
-    CONF_GAMERTOKEN,
-    CONF_NOW_PLAYING_ENTITY,
-    CONF_EXCLUDED_APPS,
-    CONF_GAMES_FILE,
-    DEFAULT_GAMES_FILE,
-    URL_EXPORT_COLLECTION,
-    ISSUE_URL_MAPPING,
+    ATTR_COMPLETED_GAMES,
+    ATTR_COMPLETION_PCT,
     ATTR_GAMERSCORE,
     ATTR_TA_SCORE,
-    ATTR_TOTAL_GAMES,
-    ATTR_COMPLETED_GAMES,
     ATTR_TOTAL_ACHIEVEMENTS,
-    ATTR_COMPLETION_PCT,
-    GAME_NAME_MAPPING
+    ATTR_TOTAL_GAMES,
+    CONF_EXCLUDED_APPS,
+    CONF_GAMER_ID,
+    CONF_GAMERTAG,
+    CONF_GAMERTOKEN,
+    CONF_GAMES_FILE,
+    CONF_NOW_PLAYING_ENTITY,
+    DEFAULT_GAMES_FILE,
+    DOMAIN,
+    GAME_NAME_MAPPING,
+    ISSUE_URL_MAPPING,
+    URL_EXPORT_COLLECTION,
 )
 
 if TYPE_CHECKING:
@@ -47,17 +47,11 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching data from TrueAchievements with Anti-Ban safety."""
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        entry: ConfigEntry,
-        session: ClientSession
+        self, hass: HomeAssistant, entry: ConfigEntry, session: ClientSession
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(minutes=30)
+            hass, _LOGGER, name=DOMAIN, update_interval=timedelta(minutes=30)
         )
         self.entry: ConfigEntry = entry
         self.session: ClientSession = session
@@ -74,8 +68,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._update_local_config()
 
         now_playing_eid: str | None = entry.options.get(
-            CONF_NOW_PLAYING_ENTITY,
-            entry.data.get(CONF_NOW_PLAYING_ENTITY)
+            CONF_NOW_PLAYING_ENTITY, entry.data.get(CONF_NOW_PLAYING_ENTITY)
         )
         if now_playing_eid:
             async_track_state_change_event(
@@ -93,7 +86,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         conf_path = str(dat.get(CONF_GAMES_FILE, DEFAULT_GAMES_FILE))
         self.games_file = Path(self.hass.config.path(conf_path))
 
-        excluded_raw: str = opts.get(CONF_EXCLUDED_APPS, dat.get(CONF_EXCLUDED_APPS, ""))
+        excluded_raw: str = opts.get(
+            CONF_EXCLUDED_APPS, dat.get(CONF_EXCLUDED_APPS, "")
+        )
         self.excluded_apps = [
             app.strip().lower() for app in excluded_raw.split(",") if app.strip()
         ]
@@ -130,33 +125,45 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
                 async with self.session.get(
-                    url_csv,
-                    headers=headers,
-                    timeout=ClientTimeout(total=20)
+                    url_csv, headers=headers, timeout=ClientTimeout(total=20)
                 ) as resp:
 
                     if resp.status == 200:
                         content = await resp.read()
                         # STRICT CONTENT CHECK: Ensure it's a real CSV with headers
                         if len(content) > 1000 and b"Game name" in content:
-                            await self.hass.async_add_executor_job(self._write_file, content)
+                            await self.hass.async_add_executor_job(
+                                self._write_file, content
+                            )
                             self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
-                            self.auth_failed = False  # Reset binary sensor to OFF (Normal)
+                            self.auth_failed = (
+                                False  # Reset binary sensor to OFF (Normal)
+                            )
                             _LOGGER.info("CSV updated successfully")
                         else:
                             # Received 200 OK but content is not CSV (e.g., login page)
-                            _LOGGER.error("Invalid CSV content received (Cookie probably expired)")
-                            self.auth_failed = True  # This turns your binary_sensor ON (Problem)
+                            _LOGGER.error(
+                                "Invalid CSV content received (Cookie probably expired)"
+                            )
+                            self.auth_failed = (
+                                True  # This turns your binary_sensor ON (Problem)
+                            )
                             self._send_error_notification()
 
                     elif resp.status in (401, 403):
-                        _LOGGER.error("TA Authentication error (Status: %s)", resp.status)
-                        self.auth_failed = True  # This turns your binary_sensor ON (Problem)
+                        _LOGGER.error(
+                            "TA Authentication error (Status: %s)", resp.status
+                        )
+                        self.auth_failed = (
+                            True  # This turns your binary_sensor ON (Problem)
+                        )
                         self._send_error_notification()
 
                         # ANTI-BAN SAFETY: Touch the file even on failure to wait 24h
                         if self.games_file.exists():
-                            await self.hass.async_add_executor_job(os.utime, self.games_file, None)
+                            await self.hass.async_add_executor_job(
+                                os.utime, self.games_file, None
+                            )
 
             except Exception as err:  # pylint: disable=broad-exception-caught
                 _LOGGER.error("Network error during update: %s", err)
@@ -167,8 +174,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         game_image = (game_info or {}).get("image")
 
         data = await self.hass.async_add_executor_job(
-            self._read_and_process_csv,
-            raw_game_name
+            self._read_and_process_csv, raw_game_name
         )
 
         if "current_game_details" not in data or not data["current_game_details"]:
@@ -194,14 +200,13 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "message": f"The cookie for **{self.gamer_tag}** has expired.",
                 "title": "TrueAchievements: Access Error",
                 "notification_id": "ta_access_error",
-            }
+            },
         )
 
     def get_game_info_local(self) -> dict[str, Any] | None:
         """Retrieve current game name from the linked Xbox entity."""
         eid_sensor: str | None = self.entry.options.get(
-            CONF_NOW_PLAYING_ENTITY,
-            self.entry.data.get(CONF_NOW_PLAYING_ENTITY)
+            CONF_NOW_PLAYING_ENTITY, self.entry.data.get(CONF_NOW_PLAYING_ENTITY)
         )
         if not eid_sensor:
             return None
@@ -212,7 +217,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             img_state = self.hass.states.get(img_eid)
             return {
                 "name": state.state,
-                "image": img_state.attributes.get("entity_picture") if img_state else None
+                "image": (
+                    img_state.attributes.get("entity_picture") if img_state else None
+                ),
             }
         return None
 
@@ -229,25 +236,39 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return {}
 
         try:
-            with open(self.games_file, mode="r", encoding="utf-8-sig") as f:
+            with open(self.games_file, encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
                 if not reader.fieldnames:
                     return {}
-                reader.fieldnames = [n.replace('"', '').strip() for n in reader.fieldnames]
+
+                reader.fieldnames = [
+                    n.replace('"', "").strip() for n in reader.fieldnames
+                ]
 
                 def s_int(val: Any) -> int:
                     try:
-                        clean_v = re.sub(r'[^\d]', '', str(val))
+                        clean_v = re.sub(r"[^\d]", "", str(val))
                         return int(clean_v) if clean_v else 0
                     except (ValueError, TypeError):
                         return 0
 
                 for row in reader:
-                    row = {k: (str(v).replace('"', '').strip() if v else "") for k, v in row.items()}
+                    row = {
+                        k.replace('"', "").strip(): (
+                            str(v).replace('"', "").strip() if v else ""
+                        )
+                        for k, v in row.items()
+                    }
+
                     name_in_csv = row.get("Game name", "")
                     plat = row.get("Platform", "")
+                    if not name_in_csv:
+                        continue
 
-                    if "app" in plat.lower() or any(x in name_in_csv.lower() for x in self.excluded_apps):
+                    if "app" in plat or any(
+                        x in name_in_csv.lower() for x in self.excluded_apps
+                    ):
+                        _LOGGER.debug("Excluding: %s (%s)", name_in_csv, plat)
                         continue
 
                     gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
@@ -255,7 +276,11 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
                     ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
 
-                    if lookup_name and lookup_name.lower() == name_in_csv.lower():
+                    if (
+                        lookup_name
+                        and lookup_name.lower().strip() == name_in_csv.lower().strip()
+                    ):
+                        walkthrough = row.get("Walkthrough", "").strip()
                         current_game_stats = {
                             "name": current_game_name,
                             "platform": plat,
@@ -265,7 +290,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             "hours_played": f"{row.get('Hours Played', '0')} h",
                             "game_completion": f"{row.get('My Completion Percentage', '0')}%",
                             "game_ratio": row.get("My Ratio", "1.00"),
-                            "game_url": row.get("Game URL") or row.get("URL") or "N/A"
+                            "game_url": row.get("Game URL") or row.get("URL") or "N/A",
+                            "walkthrough_url": (
+                                walkthrough
+                                if walkthrough and walkthrough.startswith("http")
+                                else None
+                            ),
                         }
 
                     if ach_won > 0:
@@ -277,7 +307,11 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         if ach_won >= ach_max > 0:
                             completed += 1
 
-            if lookup_name and not current_game_stats and lookup_name not in self._notified_games:
+            if (
+                lookup_name
+                and not current_game_stats
+                and lookup_name not in self._notified_games
+            ):
                 self._notified_games.add(lookup_name)
                 self.hass.add_job(
                     self.hass.services.async_call,
@@ -287,7 +321,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "title": "TrueAchievements: Action Required",
                         "message": f"Game **{lookup_name}** not matching. [Report here]({ISSUE_URL_MAPPING})",
                         "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
-                    }
+                    },
                 )
 
         except Exception as err:  # pylint: disable=broad-exception-caught
@@ -299,7 +333,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ATTR_TOTAL_GAMES: started,
             ATTR_COMPLETED_GAMES: completed,
             ATTR_TOTAL_ACHIEVEMENTS: total_ach,
-            ATTR_COMPLETION_PCT: round((total_ach / max_ach * 100), 2) if max_ach > 0 else 0,
+            ATTR_COMPLETION_PCT: (
+                round((total_ach / max_ach * 100), 2) if max_ach > 0 else 0
+            ),
             "current_game_name": current_game_name or "offline_status",
-            "current_game_details": current_game_stats
+            "current_game_details": current_game_stats,
         }

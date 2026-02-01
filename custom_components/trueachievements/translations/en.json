@@ -1,51 +1,38 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "TrueAchievements Configuration",
-        "description": "Enter your TrueAchievements credentials. You can find your GamerID in your profile URL and your GamerToken in your cookies (TrueGamingIdentity).",
-        "data": {
-          "gamertag": "Xbox Gamertag",
-          "gamer_id": "Gamer ID",
-          "gamertoken": "Session Token (Cookie)",
-          "now_playing_entity": "Xbox Tracked Entity (Now Playing)",
-          "excluded_apps": "Excluded Apps (comma separated)",
-          "games_file": "CSV File Path"
-        }
-      }
+    "abort": {
+      "already_configured": "This account is already configured."
     },
     "error": {
       "cannot_connect": "Failed to connect to server",
       "invalid_auth": "Invalid authentication (check your token)",
       "unknown": "Unexpected error"
     },
-    "abort": {
-      "already_configured": "This account is already configured."
-    }
-  },
-  "options": {
     "step": {
-      "init": {
+      "user": {
         "data": {
+          "excluded_apps": "Excluded Apps (comma separated)",
+          "gamer_id": "Gamer ID",
+          "gamertag": "Xbox Gamertag",
           "gamertoken": "Session Token (Cookie)",
-          "excluded_apps": "Excluded Apps",
-          "now_playing_entity": "Xbox Tracked Entity"
-        }
+          "games_file": "CSV File Path",
+          "now_playing_entity": "Xbox Tracked Entity (Now Playing)"
+        },
+        "description": "Enter your TrueAchievements credentials. You can find your GamerID in your profile URL and your GamerToken in your cookies (TrueGamingIdentity).",
+        "title": "TrueAchievements Configuration"
       }
     }
   },
   "entity": {
+    "binary_sensor": {
+      "auth_status": {
+        "name": "TA Auth Status",
+        "state_attributes": {
+          "last_update": { "name": "Last Sync Attempt" }
+        }
+      }
+    },
     "sensor": {
-      "gamerscore": {
-        "name": "Gamerscore"
-      },
-      "ta_score": {
-        "name": "TA Score"
-      },
-      "total_games": {
-        "name": "Total Games",
-        "unit_of_measurement": "games"
-      },
       "completed_games": {
         "name": "Completed Games",
         "unit_of_measurement": "games"
@@ -53,8 +40,8 @@
       "completion_percentage": {
         "name": "Completion Percentage"
       },
-      "total_achievements": {
-        "name": "Total Achievements"
+      "gamerscore": {
+        "name": "Gamerscore"
       },
       "now_playing": {
         "name": "Now Playing",
@@ -63,22 +50,36 @@
         },
         "state_attributes": {
           "achievements": { "name": "Achievements" },
-          "gamerscore": { "name": "Gamerscore" },
-          "ta_score": { "name": "TA Score" },
-          "hours_played": { "name": "Time Played" },
           "game_completion": { "name": "Progression" },
           "game_ratio": { "name": "Ratio" },
-          "game_url": { "name": "Game URL" },
+          "game_url": { "name": "TA Game URL" },
+          "gamerscore": { "name": "Gamerscore" },
+          "hours_played": { "name": "Time Played" },
+          "last_update": { "name": "Last CSV Update" },
           "platform": { "name": "Plateform" },
-          "last_update": { "name": "Last CSV Update" }
+          "ta_score": { "name": "TA Score" },
+          "walkthrough_url": { "name": "Achievements Guide" }
         }
+      },
+      "ta_score": {
+        "name": "TA Score"
+      },
+      "total_achievements": {
+        "name": "Total Achievements"
+      },
+      "total_games": {
+        "name": "Total Games",
+        "unit_of_measurement": "games"
       }
-    },
-    "binary_sensor": {
-      "auth_status": {
-        "name": "TA Auth Status",
-        "state_attributes": {
-          "last_update": { "name": "Last Sync Attempt" }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "excluded_apps": "Excluded Apps",
+          "gamertoken": "Session Token (Cookie)",
+          "now_playing_entity": "Xbox Tracked Entity"
         }
       }
     }

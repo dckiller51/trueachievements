@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    DOMAIN,
     CONF_AUTH_STATUS,
+    DOMAIN,
 )
 
 if TYPE_CHECKING:
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, kw_only=True)
 class TABinarySensorEntityDescription(BinarySensorEntityDescription):
     """Description for TrueAchievements binary sensors."""
+
     is_on_fn: Callable[[TrueAchievementsCoordinator], bool]
 
 
@@ -42,19 +43,21 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[TABinarySensorEntityDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the TrueAchievements binary sensor platform."""
     coordinator: TrueAchievementsCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities = [TABinarySensorEntity(coordinator, desc) for desc in BINARY_SENSOR_DESCRIPTIONS]
+    entities = [
+        TABinarySensorEntity(coordinator, desc) for desc in BINARY_SENSOR_DESCRIPTIONS
+    ]
 
     async_add_entities(entities)
 
 
-class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], BinarySensorEntity):
+class TABinarySensorEntity(
+    CoordinatorEntity["TrueAchievementsCoordinator"], BinarySensorEntity
+):
     """Representation of a TrueAchievements binary sensor."""
 
     entity_description: TABinarySensorEntityDescription
@@ -63,7 +66,7 @@ class TABinarySensorEntity(CoordinatorEntity["TrueAchievementsCoordinator"], Bin
     def __init__(
         self,
         coordinator: TrueAchievementsCoordinator,
-        description: TABinarySensorEntityDescription
+        description: TABinarySensorEntityDescription,
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator)
