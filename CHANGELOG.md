@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.2.0
+
+- **Added** Walkthrough Support: If a game has a walkthrough on TrueAchievements, a new attribute walkthrough_url is now available.
+
+- **Fixed** Game matching: Updated `GAME_NAME_MAPPING` to correct the inconsistency for **Minecraft (Gear VR)** and **Minecraft (Nintendo Switch)**.
+
 ## 2026.1.4
 
 - **Added** Anti-Ban Security Lock: Implemented a 24-hour physical file-age check. The integration now strictly limits TrueAchievements server requests to once per day, regardless of Home Assistant restarts.

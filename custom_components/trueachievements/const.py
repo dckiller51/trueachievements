@@ -2,7 +2,7 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.1.4"
+VERSION = "2026.2.0"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
@@ -24,7 +24,9 @@ DEFAULT_ACHIEVEMENTS_FILE = "trueachievements/achievements.csv"
 
 # TrueAchievements URLs
 # Use gamecollection export to get all game stats for a specific GamerID
-URL_EXPORT_COLLECTION = "https://www.trueachievements.com/download.aspx?type=gamecollection&id={}"
+URL_EXPORT_COLLECTION = (
+    "https://www.trueachievements.com/download.aspx?type=gamecollection&id={}"
+)
 
 # Sensor attributes
 ATTR_GAMERSCORE = "gamerscore"
@@ -38,10 +40,11 @@ ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
 # This handles discrepancies between Xbox Live's "Now Playing" status
 # and how games are indexed in the TA CSV export.
 GAME_NAME_MAPPING = {
-
     "Minecraft for Android": "Minecraft (Android)",
     "Minecraft for Kindle Fire": "Minecraft (Kindle Fire)",
-    "Roblox - Xbox": "ROBLOX"
+    "Minecraft for Gear VR": "Minecraft (Gear VR)",
+    "Minecraft for Nintendo Switch": "Minecraft (Nintendo Switch)",
+    "Roblox - Xbox": "ROBLOX",
 }
 
 STARTUP_MESSAGE = f"""
