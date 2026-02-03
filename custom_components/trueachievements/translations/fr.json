@@ -58,7 +58,12 @@
           "last_update": { "name": "Dernière MAJ CSV" },
           "platform": { "name": "Plateforme" },
           "ta_score": { "name": "Points TA" },
-          "walkthrough_url": { "name": "Guide des succès" }
+          "walkthrough_url": {
+            "name": "Guide des succès",
+            "state": {
+              "not_available": "Non disponible pour ce titre"
+            }
+          }
         }
       },
       "ta_score": {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import logging
 import os
 import re
@@ -31,7 +32,6 @@ from .const import (
     CONF_NOW_PLAYING_ENTITY,
     DEFAULT_GAMES_FILE,
     DOMAIN,
-    GAME_NAME_MAPPING,
     ISSUE_URL_MAPPING,
     URL_EXPORT_COLLECTION,
 )
@@ -64,6 +64,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.gamer_token: str = ""
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
+        self.mapping_file: Path = Path(__file__).parent / "mapping.json"
+        self.game_mapping: dict[str, str] = {}
 
         self._update_local_config()
 
@@ -92,6 +94,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.excluded_apps = [
             app.strip().lower() for app in excluded_raw.split(",") if app.strip()
         ]
+
+        self.game_mapping = self._load_mapping()
 
     async def _handle_state_change(self, _event: Any) -> None:
         """Trigger a refresh when the Xbox game status changes."""
@@ -173,6 +177,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         raw_game_name = (game_info or {}).get("name")
         game_image = (game_info or {}).get("image")
 
+        self.game_mapping = self._load_mapping()
+
         data = await self.hass.async_add_executor_job(
             self._read_and_process_csv, raw_game_name
         )
@@ -184,6 +190,25 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         data["last_update"] = self.last_valid_update
         return data
+
+    def _load_mapping(self) -> dict[str, str]:
+        """Load game name mapping from local JSON file."""
+        if not self.mapping_file.exists():
+            _LOGGER.debug("No mapping.json found, skipping")
+            return {}
+        try:
+            with open(self.mapping_file, encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return {str(k): str(v) for k, v in data.items()}
+                _LOGGER.error("mapping.json is not a dictionary")
+                return {}
+        except (OSError, json.JSONDecodeError) as err:
+            _LOGGER.error("Failed to load mapping.json: %s", err)
+            return {}
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Unexpected error loading mapping: %s", err)
+            return {}
 
     def _write_file(self, content: bytes) -> None:
         """Physically save the CSV file."""
@@ -230,7 +255,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         lookup_name: str | None = current_game_name
         if current_game_name is not None:
-            lookup_name = GAME_NAME_MAPPING.get(current_game_name, current_game_name)
+            lookup_name = self.game_mapping.get(current_game_name, current_game_name)
 
         if not self.games_file.exists():
             return {}
@@ -271,10 +296,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         _LOGGER.debug("Excluding: %s (%s)", name_in_csv, plat)
                         continue
 
-                    gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
-                    ta_won = s_int(row.get("TrueAchievement Won (incl. DLC)"))
-                    ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
                     ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
+                    ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
+                    gs_max = s_int(row.get("Max Gamerscore (incl. DLC)"))
+                    gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
+                    ta_max = s_int(row.get("Max TrueAchievement (incl. DLC)"))
+                    ta_won = s_int(row.get("TrueAchievement Won (incl. DLC)"))
 
                     if (
                         lookup_name
@@ -285,8 +312,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             "name": current_game_name,
                             "platform": plat,
                             "achievements": f"{ach_won} / {ach_max}",
-                            "gamerscore": f"{gs_won} G",
-                            "ta_score": f"{ta_won} TA",
+                            "gamerscore": f"{gs_won} G / {gs_max} G",
+                            "ta_score": f"{ta_won} TA / {ta_max} TA",
                             "hours_played": f"{row.get('Hours Played', '0')} h",
                             "game_completion": f"{row.get('My Completion Percentage', '0')}%",
                             "game_ratio": row.get("My Ratio", "1.00"),
@@ -294,7 +321,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             "walkthrough_url": (
                                 walkthrough
                                 if walkthrough and walkthrough.startswith("http")
-                                else None
+                                else "not_available"
                             ),
                         }
 

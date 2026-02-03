@@ -57,16 +57,39 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 
 ## Sensors Created
 
-| Sensor                 | Description                                                             |
-| :--------------------- | :---------------------------------------------------------------------- |
-| **Gamerscore**         | Your total Gamerscore (G).                                              |
-| **TA Score**           | Your total TrueAchievement score.                                       |
-| **Completion %**       | Your global achievement completion rate.                                |
-| **Total Games**        | Total number of games started.                                          |
-| **Completed Games**    | Number of games finished with 100% achievements.                        |
-| **Total Achievements** | Total number of individual achievements unlocked.                       |
-| **Now Playing**        | Current game name with detailed attributes (Ratio, Hours played, etc.). |
-| **Auth Status**        | Binary sensor to alert if your Session Token has expired.               |
+| Sensor                 | Description                             | Key Attributes / Info                   |
+| :--------------------- | :-------------------------------------- | :-------------------------------------- |
+| **Gamerscore**         | Your total Gamerscore (G).              | Total GS accumulated.                   |
+| **TA Score**           | Your total TrueAchievement score.       | Total TA points.                        |
+| **Completion %**       | Global achievement completion rate.     | Percentage based on total achievements. |
+| **Total Games**        | Total number of games started.          | Excludes apps (if configured).          |
+| **Completed Games**    | Games finished with 100% achievements.  | Games with all achievements unlocked.   |
+| **Total Achievements** | Total individual achievements unlocked. | All games combined.                     |
+| **Now Playing**        | Current game name and details.          | **See detailed attributes below.**      |
+| **Auth Status**        | Binary sensor for session validity.     | `ON` if token needs update.             |
+
+---
+
+### 🎮 Now Playing Attributes
+
+When a game is detected via your linked Xbox entity, the **Now Playing** sensor (`sensor.trueachievements_now_playing`) provides these detailed attributes for use in your dashboards:
+
+| Attribute         | Example / Description                                            |
+| :---------------- | :--------------------------------------------------------------- |
+| `name`            | Full title of the game.                                          |
+| `platform`        | Xbox Series X\|S, PC, Nintendo Switch, etc.                      |
+| `achievements`    | Progression format (e.g., `10 / 42`).                            |
+| `gamerscore`      | Points earned vs Total (e.g., `140 G / 1000 G`).                 |
+| `ta_score`        | Specific TA points earned vs Total (e.g., `165 TA / 1778 TA`).   |
+| `hours_played`    | Estimated time spent on the title.                               |
+| `game_completion` | Percentage completed for this specific title.                    |
+| `game_ratio`      | The difficulty ratio of the game (e.g., `1.45`).                 |
+| `game_url`        | Direct link to the game's page on TrueAchievements.              |
+| `walkthrough_url` | Link to the TA Guide (or "Not available for this title").        |
+| `last_update`     | Timestamp of the last successful CSV sync from TrueAchievements. |
+
+> [!TIP]
+> You can use the `walkthrough_url` attribute in a **Tap Action** on your dashboard to open the guide directly when you're stuck on a achievement!
 
 ## Screenshots
 
