@@ -2,7 +2,7 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.2.0"
+VERSION = "2026.2.1"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
@@ -35,17 +35,6 @@ ATTR_COMPLETION_PCT = "completion_percentage"
 ATTR_TOTAL_GAMES = "total_games"
 ATTR_COMPLETED_GAMES = "completed_games"
 ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
-
-# Game Name Mapping (Xbox Name: TrueAchievements Name)
-# This handles discrepancies between Xbox Live's "Now Playing" status
-# and how games are indexed in the TA CSV export.
-GAME_NAME_MAPPING = {
-    "Minecraft for Android": "Minecraft (Android)",
-    "Minecraft for Kindle Fire": "Minecraft (Kindle Fire)",
-    "Minecraft for Gear VR": "Minecraft (Gear VR)",
-    "Minecraft for Nintendo Switch": "Minecraft (Nintendo Switch)",
-    "Roblox - Xbox": "ROBLOX",
-}
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------

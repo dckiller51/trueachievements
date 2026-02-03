@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.2.1
+
+- **Added** Translation support for Walkthrough status: Displays a localized message (e.g., "Not available for this title") when no official guide is found.
+- **Fixed** Game Matching: Mapping logic fully migrated to `mapping.json` for better maintainability
+- **Improved** Gamerscore display: Now shows progression format (e.g., 140 G / 1000 G) for better tracking.
+- **Improved** TA Score display: Now shows progression format (e.g., 165 TA / 1778 TA) for better tracking.
+
 ## 2026.2.0
 
 - **Added** Walkthrough Support: If a game has a walkthrough on TrueAchievements, a new attribute walkthrough_url is now available.
