@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.3.0
+
+- **Improved** Game Matching: Updated mapping.json with new titles and platform fixes for better accuracy.
+
 ## 2026.2.1
 
 - **Added** Translation support for Walkthrough status: Displays a localized message (e.g., "Not available for this title") when no official guide is found.
