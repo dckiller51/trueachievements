@@ -4,9 +4,16 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.3.1
+
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
+- **Fixed** Xbox 360 Noise: Automatically exclude "Xbox 360 Dashboard" from game tracking to prevent false "Game not matching" notifications.
+- **Refined** Platform Detection: Improved logic to distinguish between system interfaces and actual games on legacy consoles.
+- **Optimized** Performance: Resolved "Blocking call" errors by moving disk I/O operations to the executor thread, ensuring a smoother UI experience.
+
 ## 2026.3.0
 
-- **Improved** Game Matching: Updated mapping.json with new titles and platform fixes for better accuracy.
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
 
 ## 2026.2.1
 
