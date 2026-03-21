@@ -67,8 +67,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.mapping_file: Path = Path(__file__).parent / "mapping.json"
         self.game_mapping: dict[str, str] = {}
 
-        self._update_local_config()
-
         now_playing_eid: str | None = entry.options.get(
             CONF_NOW_PLAYING_ENTITY, entry.data.get(CONF_NOW_PLAYING_ENTITY)
         )
@@ -95,8 +93,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             app.strip().lower() for app in excluded_raw.split(",") if app.strip()
         ]
 
-        self.game_mapping = self._load_mapping()
-
     async def _handle_state_change(self, _event: Any) -> None:
         """Trigger a refresh when the Xbox game status changes."""
         _LOGGER.debug("Xbox game change detected, refreshing TrueAchievements data")
@@ -105,21 +101,23 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TA with 24h safety lock or use local CSV."""
         self._update_local_config()
+
+        # Load mapping using executor to avoid blocking the event loop.
+        self.game_mapping = await self.hass.async_add_executor_job(self._load_mapping)
+
         now = dt_util.now()
         should_download = True
 
-        # --- 24H CACHE LOGIC ---
         if self.games_file.exists():
-            mtime = os.path.getmtime(self.games_file)
+            mtime = self.games_file.stat().st_mtime
             last_modified = dt_util.as_local(dt_util.utc_from_timestamp(mtime))
             self.last_valid_update = last_modified.strftime("%Y-%m-%d %H:%M")
 
             if (now - last_modified) < timedelta(hours=24):
                 should_download = False
-                _LOGGER.debug("Local CSV is fresh (less than 24h old)")
+                _LOGGER.debug("Local CSV is fresh")
 
         if should_download and not self.auth_failed:
-            _LOGGER.info("Attempting daily update from TrueAchievements...")
             headers = {
                 "User-Agent": "Mozilla/5.0",
                 "Cookie": f"TrueGamingIdentity={self.gamer_token}",
@@ -131,53 +129,31 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 async with self.session.get(
                     url_csv, headers=headers, timeout=ClientTimeout(total=20)
                 ) as resp:
-
                     if resp.status == 200:
                         content = await resp.read()
-                        # STRICT CONTENT CHECK: Ensure it's a real CSV with headers
                         if len(content) > 1000 and b"Game name" in content:
                             await self.hass.async_add_executor_job(
                                 self._write_file, content
                             )
                             self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
-                            self.auth_failed = (
-                                False  # Reset binary sensor to OFF (Normal)
-                            )
-                            _LOGGER.info("CSV updated successfully")
+                            self.auth_failed = False
                         else:
-                            # Received 200 OK but content is not CSV (e.g., login page)
-                            _LOGGER.error(
-                                "Invalid CSV content received (Cookie probably expired)"
-                            )
-                            self.auth_failed = (
-                                True  # This turns your binary_sensor ON (Problem)
-                            )
+                            _LOGGER.error("Invalid CSV content (Cookie expired)")
+                            self.auth_failed = True
                             self._send_error_notification()
-
                     elif resp.status in (401, 403):
-                        _LOGGER.error(
-                            "TA Authentication error (Status: %s)", resp.status
-                        )
-                        self.auth_failed = (
-                            True  # This turns your binary_sensor ON (Problem)
-                        )
+                        self.auth_failed = True
                         self._send_error_notification()
-
-                        # ANTI-BAN SAFETY: Touch the file even on failure to wait 24h
                         if self.games_file.exists():
                             await self.hass.async_add_executor_job(
                                 os.utime, self.games_file, None
                             )
-
             except Exception as err:  # pylint: disable=broad-exception-caught
                 _LOGGER.error("Network error during update: %s", err)
 
-        # Always process local data
         game_info = self.get_game_info_local()
         raw_game_name = (game_info or {}).get("name")
         game_image = (game_info or {}).get("image")
-
-        self.game_mapping = self._load_mapping()
 
         data = await self.hass.async_add_executor_job(
             self._read_and_process_csv, raw_game_name
@@ -187,27 +163,21 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             data["current_game_details"] = {}
 
         data["current_game_details"]["entity_picture"] = game_image
-
         data["last_update"] = self.last_valid_update
         return data
 
     def _load_mapping(self) -> dict[str, str]:
         """Load game name mapping from local JSON file."""
         if not self.mapping_file.exists():
-            _LOGGER.debug("No mapping.json found, skipping")
             return {}
         try:
             with open(self.mapping_file, encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
                     return {str(k): str(v) for k, v in data.items()}
-                _LOGGER.error("mapping.json is not a dictionary")
                 return {}
         except (OSError, json.JSONDecodeError) as err:
             _LOGGER.error("Failed to load mapping.json: %s", err)
-            return {}
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.error("Unexpected error loading mapping: %s", err)
             return {}
 
     def _write_file(self, content: bytes) -> None:
@@ -216,7 +186,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.games_file.write_bytes(content)
 
     def _send_error_notification(self) -> None:
-        """Notification for expired token."""
+        """Send a persistent notification for expired credentials."""
         self.hass.add_job(
             self.hass.services.async_call,
             "persistent_notification",
@@ -237,7 +207,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return None
 
         state = self.hass.states.get(eid_sensor)
-        if state and state.state not in ("unavailable", "unknown", "idle"):
+        if state and state.state not in (
+            "unavailable",
+            "unknown",
+            "idle",
+            "Xbox 360 Dashboard",
+        ):
             img_eid = eid_sensor.replace("sensor.", "image.")
             img_state = self.hass.states.get(img_eid)
             return {
@@ -250,6 +225,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _read_and_process_csv(self, current_game_name: str | None) -> dict[str, Any]:
         """Parse the local CSV file and calculate statistics."""
+        if current_game_name == "Xbox 360 Dashboard":
+            current_game_name = None
+
         total_gs, total_ta, total_ach, max_ach, completed, started = 0, 0, 0, 0, 0, 0
         current_game_stats: dict[str, Any] = {}
 
@@ -290,10 +268,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if not name_in_csv:
                         continue
 
-                    if "app" in plat or any(
+                    if "app" in plat.lower() or any(
                         x in name_in_csv.lower() for x in self.excluded_apps
                     ):
-                        _LOGGER.debug("Excluding: %s (%s)", name_in_csv, plat)
                         continue
 
                     ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
