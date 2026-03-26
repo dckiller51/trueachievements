@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.3.2
+
+- **Breaking Change** Minimum Requirement: Now requires **Home Assistant 2026.4.0b1** or newer. This is mandatory to support the new `platform` attribute and updated metadata standards from the official Xbox integration.
+- **Added** Publisher Support: New `publisher` attribute added to game sensors for better identification and sorting.
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
+
 ## 2026.3.1
 
 - **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
