@@ -78,6 +78,7 @@ When a game is detected via your linked Xbox entity, the **Now Playing** sensor 
 | :---------------- | :--------------------------------------------------------------- |
 | `name`            | Full title of the game.                                          |
 | `platform`        | Xbox Series X\|S, PC, Nintendo Switch, etc.                      |
+| `publisher`       | Microsoft, Ubisoft, Rockstar Games, etc.                         |
 | `achievements`    | Progression format (e.g., `10 / 42`).                            |
 | `gamerscore`      | Points earned vs Total (e.g., `140 G / 1000 G`).                 |
 | `ta_score`        | Specific TA points earned vs Total (e.g., `165 TA / 1778 TA`).   |

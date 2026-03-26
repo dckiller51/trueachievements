@@ -57,6 +57,7 @@
           "hours_played": { "name": "Temps de jeu" },
           "last_update": { "name": "Dernière MAJ CSV" },
           "platform": { "name": "Plateforme" },
+          "publisher": { "name": "Éditeur" },
           "ta_score": { "name": "Points TA" },
           "walkthrough_url": {
             "name": "Guide des succès",

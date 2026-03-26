@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import os
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -65,7 +64,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
         self.mapping_file: Path = Path(__file__).parent / "mapping.json"
-        self.game_mapping: dict[str, str] = {}
+        self.game_mapping: dict[str, Any] = {}
 
         now_playing_eid: str | None = entry.options.get(
             CONF_NOW_PLAYING_ENTITY, entry.data.get(CONF_NOW_PLAYING_ENTITY)
@@ -101,8 +100,6 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TA with 24h safety lock or use local CSV."""
         self._update_local_config()
-
-        # Load mapping using executor to avoid blocking the event loop.
         self.game_mapping = await self.hass.async_add_executor_job(self._load_mapping)
 
         now = dt_util.now()
@@ -112,72 +109,63 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             mtime = self.games_file.stat().st_mtime
             last_modified = dt_util.as_local(dt_util.utc_from_timestamp(mtime))
             self.last_valid_update = last_modified.strftime("%Y-%m-%d %H:%M")
-
             if (now - last_modified) < timedelta(hours=24):
                 should_download = False
-                _LOGGER.debug("Local CSV is fresh")
 
         if should_download and not self.auth_failed:
-            headers = {
-                "User-Agent": "Mozilla/5.0",
-                "Cookie": f"TrueGamingIdentity={self.gamer_token}",
-                "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
-            }
-
-            try:
-                url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
-                async with self.session.get(
-                    url_csv, headers=headers, timeout=ClientTimeout(total=20)
-                ) as resp:
-                    if resp.status == 200:
-                        content = await resp.read()
-                        if len(content) > 1000 and b"Game name" in content:
-                            await self.hass.async_add_executor_job(
-                                self._write_file, content
-                            )
-                            self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
-                            self.auth_failed = False
-                        else:
-                            _LOGGER.error("Invalid CSV content (Cookie expired)")
-                            self.auth_failed = True
-                            self._send_error_notification()
-                    elif resp.status in (401, 403):
-                        self.auth_failed = True
-                        self._send_error_notification()
-                        if self.games_file.exists():
-                            await self.hass.async_add_executor_job(
-                                os.utime, self.games_file, None
-                            )
-            except Exception as err:  # pylint: disable=broad-exception-caught
-                _LOGGER.error("Network error during update: %s", err)
+            await self._download_csv(now)
 
         game_info = self.get_game_info_local()
-        raw_game_name = (game_info or {}).get("name")
-        game_image = (game_info or {}).get("image")
-
         data = await self.hass.async_add_executor_job(
-            self._read_and_process_csv, raw_game_name
+            self._read_and_process_csv, game_info
         )
 
         if "current_game_details" not in data or not data["current_game_details"]:
             data["current_game_details"] = {}
-
-        data["current_game_details"]["entity_picture"] = game_image
+        data["current_game_details"]["entity_picture"] = (game_info or {}).get("image")
         data["last_update"] = self.last_valid_update
         return data
 
-    def _load_mapping(self) -> dict[str, str]:
-        """Load game name mapping from local JSON file."""
+    async def _download_csv(self, now: Any) -> None:
+        """Handle the CSV download logic."""
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Cookie": f"TrueGamingIdentity={self.gamer_token}",
+            "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
+        }
+        try:
+            url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
+            async with self.session.get(
+                url_csv, headers=headers, timeout=ClientTimeout(total=20)
+            ) as resp:
+                if resp.status == 200:
+                    content = await resp.read()
+                    if len(content) > 1000 and b"Game name" in content:
+                        await self.hass.async_add_executor_job(
+                            self._write_file, content
+                        )
+                        self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
+                        self.auth_failed = False
+                    else:
+                        self.auth_failed = True
+                        self._send_error_notification()
+                elif resp.status in (401, 403):
+                    self.auth_failed = True
+                    self._send_error_notification()
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Network error during update: %s", err)
+
+    def _load_mapping(self) -> dict[str, Any]:
+        """Load mapping and normalize keys to lowercase."""
         if not self.mapping_file.exists():
             return {}
         try:
             with open(self.mapping_file, encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
-                    return {str(k): str(v) for k, v in data.items()}
+                    return {k.lower().strip(): v for k, v in data.items()}
                 return {}
-        except (OSError, json.JSONDecodeError) as err:
-            _LOGGER.error("Failed to load mapping.json: %s", err)
+        except Exception:  # pylint: disable=broad-exception-caught
             return {}
 
     def _write_file(self, content: bytes) -> None:
@@ -199,13 +187,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
     def get_game_info_local(self) -> dict[str, Any] | None:
-        """Retrieve current game name from the linked Xbox entity."""
-        eid_sensor: str | None = self.entry.options.get(
+        """Get info from Xbox sensor with dual-case publisher support."""
+        eid_sensor = self.entry.options.get(
             CONF_NOW_PLAYING_ENTITY, self.entry.data.get(CONF_NOW_PLAYING_ENTITY)
         )
         if not eid_sensor:
             return None
-
         state = self.hass.states.get(eid_sensor)
         if state and state.state not in (
             "unavailable",
@@ -213,27 +200,43 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "idle",
             "Xbox 360 Dashboard",
         ):
+            pub = (
+                state.attributes.get("publisher")
+                or state.attributes.get("Publisher")
+                or "Unknown"
+            )
             img_eid = eid_sensor.replace("sensor.", "image.")
             img_state = self.hass.states.get(img_eid)
             return {
                 "name": state.state,
+                "platform": state.attributes.get("platform"),
+                "publisher": pub,
                 "image": (
                     img_state.attributes.get("entity_picture") if img_state else None
                 ),
             }
         return None
 
-    def _read_and_process_csv(self, current_game_name: str | None) -> dict[str, Any]:
-        """Parse the local CSV file and calculate statistics."""
-        if current_game_name == "Xbox 360 Dashboard":
-            current_game_name = None
+    def _read_and_process_csv(self, game_info: dict[str, Any] | None) -> dict[str, Any]:
+        """Parse CSV with strict prioritised matching logic."""
+        safe_info = game_info or {}
+        current_name = safe_info.get("name", "")
+        current_plat = str(safe_info.get("platform") or "").lower()
+        current_pub = str(safe_info.get("publisher") or "Unknown").lower().strip()
 
-        total_gs, total_ta, total_ach, max_ach, completed, started = 0, 0, 0, 0, 0, 0
+        lookup_name = self._resolve_mapped_name(current_name, current_pub)
+        target_name_low = lookup_name.lower().strip()
+
+        stats = {
+            "total_gs": 0,
+            "total_ta": 0,
+            "total_ach": 0,
+            "max_ach": 0,
+            "completed": 0,
+            "started": 0,
+        }
         current_game_stats: dict[str, Any] = {}
-
-        lookup_name: str | None = current_game_name
-        if current_game_name is not None:
-            lookup_name = self.game_mapping.get(current_game_name, current_game_name)
+        match_found = False
 
         if not self.games_file.exists():
             return {}
@@ -241,80 +244,132 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             with open(self.games_file, encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                if not reader.fieldnames:
-                    return {}
-
-                reader.fieldnames = [
-                    n.replace('"', "").strip() for n in reader.fieldnames
-                ]
-
-                def s_int(val: Any) -> int:
-                    try:
-                        clean_v = re.sub(r"[^\d]", "", str(val))
-                        return int(clean_v) if clean_v else 0
-                    except (ValueError, TypeError):
-                        return 0
+                if reader.fieldnames:
+                    reader.fieldnames = [
+                        n.replace('"', "").strip() for n in reader.fieldnames
+                    ]
 
                 for row in reader:
                     row = {
-                        k.replace('"', "").strip(): (
-                            str(v).replace('"', "").strip() if v else ""
-                        )
-                        for k, v in row.items()
+                        k.strip(): (str(v).strip() if v else "") for k, v in row.items()
                     }
-
-                    name_in_csv = row.get("Game name", "")
-                    plat = row.get("Platform", "")
-                    if not name_in_csv:
-                        continue
-
-                    if "app" in plat.lower() or any(
-                        x in name_in_csv.lower() for x in self.excluded_apps
-                    ):
-                        continue
-
-                    ach_max = s_int(row.get("Max Achievements (incl. DLC)"))
-                    ach_won = s_int(row.get("Achievements Won (incl. DLC)"))
-                    gs_max = s_int(row.get("Max Gamerscore (incl. DLC)"))
-                    gs_won = s_int(row.get("GamerScore Won (incl. DLC)"))
-                    ta_max = s_int(row.get("Max TrueAchievement (incl. DLC)"))
-                    ta_won = s_int(row.get("TrueAchievement Won (incl. DLC)"))
+                    name_csv = row.get("Game name", "")
+                    plat_csv = row.get("Platform", "").lower()
 
                     if (
-                        lookup_name
-                        and lookup_name.lower().strip() == name_in_csv.lower().strip()
+                        not name_csv
+                        or "app" in plat_csv
+                        or any(x in name_csv.lower() for x in self.excluded_apps)
                     ):
-                        walkthrough = row.get("Walkthrough", "").strip()
-                        current_game_stats = {
-                            "name": current_game_name,
-                            "platform": plat,
-                            "achievements": f"{ach_won} / {ach_max}",
-                            "gamerscore": f"{gs_won} G / {gs_max} G",
-                            "ta_score": f"{ta_won} TA / {ta_max} TA",
-                            "hours_played": f"{row.get('Hours Played', '0')} h",
-                            "game_completion": f"{row.get('My Completion Percentage', '0')}%",
-                            "game_ratio": row.get("My Ratio", "1.00"),
-                            "game_url": row.get("Game URL") or row.get("URL") or "N/A",
-                            "walkthrough_url": (
-                                walkthrough
-                                if walkthrough and walkthrough.startswith("http")
-                                else "not_available"
-                            ),
-                        }
+                        continue
 
-                    if ach_won > 0:
-                        total_gs += gs_won
-                        total_ta += ta_won
-                        total_ach += ach_won
-                        max_ach += ach_max
-                        started += 1
-                        if ach_won >= ach_max > 0:
-                            completed += 1
+                    # Safe conversion
+                    row_vals = self._get_row_values(row)
 
-            if (
-                lookup_name
-                and not current_game_stats
-                and lookup_name not in self._notified_games
+                    # Matching Logic
+                    if not match_found and target_name_low == name_csv.lower().strip():
+                        if not current_plat or (
+                            current_plat in plat_csv or plat_csv in current_plat
+                        ):
+                            current_game_stats = self._build_current_game_dict(
+                                row, current_name, current_pub.title(), row_vals
+                            )
+                            match_found = True
+
+                    # Accumulation
+                    if row_vals["ach_won"] > 0:
+                        stats["total_gs"] += row_vals["gs_won"]
+                        stats["total_ta"] += row_vals["ta_won"]
+                        stats["total_ach"] += row_vals["ach_won"]
+                        stats["max_ach"] += row_vals["ach_max"]
+                        stats["started"] += 1
+                        if row_vals["ach_won"] >= row_vals["ach_max"] > 0:
+                            stats["completed"] += 1
+
+            self._handle_not_found_notification(
+                lookup_name, match_found, current_name, safe_info
+            )
+
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Error reading CSV: %s", err)
+
+        return {
+            ATTR_GAMERSCORE: stats["total_gs"],
+            ATTR_TA_SCORE: stats["total_ta"],
+            ATTR_TOTAL_GAMES: stats["started"],
+            ATTR_COMPLETED_GAMES: stats["completed"],
+            ATTR_TOTAL_ACHIEVEMENTS: stats["total_ach"],
+            ATTR_COMPLETION_PCT: (
+                round((stats["total_ach"] / stats["max_ach"] * 100), 2)
+                if stats["max_ach"] > 0
+                else 0
+            ),
+            "current_game_name": current_name or "offline_status",
+            "current_game_details": current_game_stats,
+        }
+
+    def _resolve_mapped_name(self, name: str, publisher: str) -> str:
+        """Resolve game name from mapping file."""
+        name_low = name.lower().strip()
+        if name_low in self.game_mapping:
+            mapping_val = self.game_mapping[name_low]
+            if isinstance(mapping_val, dict):
+                lower_pub_map = {
+                    str(k).lower().strip(): v for k, v in mapping_val.items()
+                }
+                return str(lower_pub_map.get(publisher, name))
+            return str(mapping_val)
+        return name
+
+    def _get_row_values(self, row: dict[str, str]) -> dict[str, int]:
+        """Convert CSV row values to integers safely (Fixes E722)."""
+
+        def _s_int(key: str) -> int:
+            try:
+                return int(re.sub(r"[^\d]", "", row.get(key, "0") or "0"))
+            except (ValueError, TypeError):
+                return 0
+
+        return {
+            "ach_won": _s_int("Achievements Won (incl. DLC)"),
+            "ach_max": _s_int("Max Achievements (incl. DLC)"),
+            "gs_won": _s_int("GamerScore Won (incl. DLC)"),
+            "gs_max": _s_int("Max Gamerscore (incl. DLC)"),
+            "ta_won": _s_int("TrueAchievement Won (incl. DLC)"),
+            "ta_max": _s_int("Max TrueAchievement (incl. DLC)"),
+        }
+
+    def _build_current_game_dict(
+        self, row: dict[str, str], name: str, pub: str, vals: dict[str, int]
+    ) -> dict[str, Any]:
+        """Build the details dictionary for the current game (Fixes R0915)."""
+        walkthrough = row.get("Walkthrough", "").strip()
+        return {
+            "name": name,
+            "platform": row.get("Platform"),
+            "publisher": pub,
+            "achievements": f"{vals['ach_won']} / {vals['ach_max']}",
+            "gamerscore": f"{vals['gs_won']} G / {vals['gs_max']} G",
+            "ta_score": f"{vals['ta_won']} TA / {vals['ta_max']} TA",
+            "hours_played": f"{row.get('Hours Played', '0')} h",
+            "game_completion": f"{row.get('My Completion Percentage', '0')}%",
+            "game_ratio": row.get("My Ratio", "1.00"),
+            "game_url": row.get("Game URL") or row.get("URL") or "N/A",
+            "walkthrough_url": (
+                walkthrough if walkthrough.startswith("http") else "not_available"
+            ),
+        }
+
+    def _handle_not_found_notification(
+        self, lookup_name: str, match_found: bool, current_name: str, info: dict
+    ) -> None:
+        """Handle 'Game not found' notifications."""
+        if lookup_name and not match_found and lookup_name not in self._notified_games:
+            if current_name.lower() not in (
+                "unavailable",
+                "unknown",
+                "idle",
+                "offline_status",
             ):
                 self._notified_games.add(lookup_name)
                 self.hass.add_job(
@@ -323,23 +378,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "create",
                     {
                         "title": "TrueAchievements: Action Required",
-                        "message": f"Game **{lookup_name}** not matching. [Report here]({ISSUE_URL_MAPPING})",
+                        "message": (
+                            f"Game **{lookup_name}** ({info.get('platform')}) not matching. "
+                            f"Publisher: {info.get('publisher')}. [Report here]({ISSUE_URL_MAPPING})"
+                        ),
                         "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
                     },
                 )
-
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.error("Error reading CSV: %s", err)
-
-        return {
-            ATTR_GAMERSCORE: total_gs,
-            ATTR_TA_SCORE: total_ta,
-            ATTR_TOTAL_GAMES: started,
-            ATTR_COMPLETED_GAMES: completed,
-            ATTR_TOTAL_ACHIEVEMENTS: total_ach,
-            ATTR_COMPLETION_PCT: (
-                round((total_ach / max_ach * 100), 2) if max_ach > 0 else 0
-            ),
-            "current_game_name": current_game_name or "offline_status",
-            "current_game_details": current_game_stats,
-        }

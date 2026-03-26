@@ -136,7 +136,6 @@ class TrueAchievementsSensor(
         self.entity_description = description
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_{description.key}"
         self._attr_translation_key = description.translation_key
-
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
@@ -160,7 +159,6 @@ class TANowPlayingSensor(
         super().__init__(coordinator)
         self._attr_translation_key = "now_playing"
         self._attr_unique_id = f"ta_{coordinator.gamer_id}_now_playing"
-
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.gamer_id)},
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
@@ -168,11 +166,10 @@ class TANowPlayingSensor(
 
     @property
     def entity_picture(self) -> str | None:
-        """Fetch the game image from the linked Xbox entity."""
-        game_info = self.coordinator.get_game_info_local()
-        if game_info and isinstance(game_info, dict):
-            return str(game_info.get("image")) if game_info.get("image") else None
-        return None
+        """Use the image stored in coordinator data."""
+        details = self.coordinator.data.get("current_game_details", {})
+        image = details.get("entity_picture")
+        return str(image) if image else None
 
     @property
     def icon(self) -> str | None:
@@ -189,12 +186,18 @@ class TANowPlayingSensor(
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return details like Platform, Achievements, URL, and last update."""
+        """Return details including Publisher and Walkthrough URL."""
         details = self.coordinator.data.get("current_game_details")
-
         attrs = {}
+
         if isinstance(details, dict):
+            # Includes platform, achievements, gs, ta_score, hours, completion, urls
             attrs.update(details)
+
+        # Add current publisher from Xbox entity for verification
+        game_info = self.coordinator.get_game_info_local()
+        if game_info:
+            attrs["publisher"] = game_info.get("publisher")
 
         attrs["last_update"] = self.coordinator.data.get("last_update")
         return attrs
