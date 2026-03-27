@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.3.3
+
+- **Improved** Advanced Game Mapping: Added support for combined `Publisher | Platform` keys in `mapping.json`. This resolves conflicts for games with identical names and publishers across different console generations (e.g., Rugby 15 on Xbox 360 vs Xbox One).
+- **Refined** Coordinator Logic: Updated the name resolution engine to prioritize specific platform-based matches before falling back to general publisher or title matches.
+- **Added** Community Support: Introduced a new GitHub Issue Template for Game Mapping. Users can now easily report naming mismatches with specific fields for Publisher and Platform.
+- **Fixed** Documentation: Updated README with a dedicated FAQ section for "Offline" status and naming troubleshooting.
+
 ## 2026.3.2
 
 - **Breaking Change** Minimum Requirement: Now requires **Home Assistant 2026.4.0b1** or newer. This is mandatory to support the new `platform` attribute and updated metadata standards from the official Xbox integration.

@@ -1,0 +1,53 @@
+name: "🎮 Game Mapping Request"
+description: "Report a missing game or a naming mismatch (e.g., Rugby 15, Roblox)."
+title: "[Mapping]: <Game Name>"
+labels: ["enhancement", "game-mapping"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thanks for helping!
+        Please provide the details below so we can update the `mapping.json` file.
+  - type: input
+    id: xbox_name
+    attributes:
+      label: "Xbox Game Name"
+      description: "The exact name shown in Home Assistant."
+      placeholder: "e.g. Rugby 15"
+    validations:
+      required: true
+  - type: input
+    id: ta_name
+    attributes:
+      label: "TrueAchievements Name"
+      description: "The exact name on the TA website or CSV."
+      placeholder: "e.g. RUGBY 15 (Xbox 360)"
+    validations:
+      required: true
+  - type: input
+    id: publisher
+    attributes:
+      label: "Publisher"
+      description: "Check the 'publisher' attribute in your HA sensor."
+      placeholder: "e.g. Bigben Interactive"
+    validations:
+      required: false
+  - type: dropdown
+    id: platform
+    attributes:
+      label: "Platform"
+      description: "Which console version is this?"
+      options:
+        - "Xbox Series X|S"
+        - "Xbox One"
+        - "Xbox 360"
+        - "Windows"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Verification"
+      options:
+        - label: "I have verified the name on TrueAchievements.com"
+          required: true

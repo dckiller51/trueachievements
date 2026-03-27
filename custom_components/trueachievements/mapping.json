@@ -61,8 +61,9 @@
   "PAW Patrol™ Rescue Wheels™: Championship": "PAW Patrol Rescue Wheels: Championship",
   "Roblox - Xbox": "ROBLOX",
   "Rugby 15": {
-    "Bigben Interactive": "RUGBY 15 (EU)",
-    "Maximum Entertainment": "RUGBY 15"
+    "bigben interactive|xbox 360": "RUGBY 15 (Xbox 360)",
+    "bigben interactive|xbox one": "RUGBY 15 (EU)",
+    "maximum entertainment": "RUGBY 15"
   },
   "TCG Card Shop Simulator (Game Preview)": "TCG Card Shop Simulator",
   "The Talos Principle 2": "The Talos Principle II",
