@@ -126,13 +126,15 @@ To ensure a successful connection, you should copy the full cookie string from y
 
 ### Why is my current game showing "Offline" or missing details?
 
-This usually happens when the name provided by the Xbox integration doesn't perfectly match the name in the TrueAchievements database (e.g., "Roblox - Xbox" vs "ROBLOX").
+This usually happens when the name provided by the **Xbox integration** doesn't perfectly match the name in the **TrueAchievements database** (e.g., `Roblox - Xbox` vs `ROBLOX`).
 
 1. **Check your notifications:** Home Assistant will alert you if a mismatch is detected.
-2. **Report the mismatch:** Open a request on our [Game Mapping Issue](https://github.com/dckiller51/trueachievements/issues/2).
-3. **Include details:** Provide the exact name shown in Home Assistant and the one on TrueAchievements.
+2. **Report the mismatch:** Open a request using our [Game Mapping Form](https://github.com/dckiller51/trueachievements/issues/new?template=game-mapping.yml).
+3. **Provide context:** Some games exist on multiple platforms (Xbox 360, Xbox One, Series X|S). If the name is identical but the stats are wrong, please specify the **Publisher** and **Platform** shown in your sensor attributes.
+4. **Include details:** Provide the exact name shown in Home Assistant and the link to the game's page on TrueAchievements.
 
-We regularly update the internal dictionary to fix these naming inconsistencies.
+> [!NOTE]
+> We regularly update the internal dictionary (`mapping.json`) to fix these naming inconsistencies and handle cross-generation title conflicts.
 
 ## Privacy & Security
 

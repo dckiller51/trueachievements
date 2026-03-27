@@ -224,7 +224,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         current_plat = str(safe_info.get("platform") or "").lower()
         current_pub = str(safe_info.get("publisher") or "Unknown").lower().strip()
 
-        lookup_name = self._resolve_mapped_name(current_name, current_pub)
+        lookup_name = self._resolve_mapped_name(current_name, current_pub, current_plat)
         target_name_low = lookup_name.lower().strip()
 
         stats = {
@@ -308,16 +308,25 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "current_game_details": current_game_stats,
         }
 
-    def _resolve_mapped_name(self, name: str, publisher: str) -> str:
-        """Resolve game name from mapping file."""
+    def _resolve_mapped_name(self, name: str, publisher: str, platform: str) -> str:
+        """Resolve game name using Publisher and Platform if necessary."""
         name_low = name.lower().strip()
+        pub_low = publisher.lower().strip()
+        plat_low = platform.lower().strip()
+
         if name_low in self.game_mapping:
             mapping_val = self.game_mapping[name_low]
             if isinstance(mapping_val, dict):
-                lower_pub_map = {
-                    str(k).lower().strip(): v for k, v in mapping_val.items()
-                }
-                return str(lower_pub_map.get(publisher, name))
+                lower_map = {str(k).lower().strip(): v for k, v in mapping_val.items()}
+                combo_key = f"{pub_low}|{plat_low}"
+                if combo_key in lower_map:
+                    return str(lower_map[combo_key])
+                if pub_low in lower_map:
+                    return str(lower_map[pub_low])
+                if plat_low in lower_map:
+                    return str(lower_map[plat_low])
+
+                return str(lower_map.get("unknown", name))
             return str(mapping_val)
         return name
 

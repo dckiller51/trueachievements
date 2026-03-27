@@ -2,11 +2,11 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.3.2"
+VERSION = "2026.3.3"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
-ISSUE_URL_MAPPING = "https://github.com/dckiller51/trueachievements/issues/2"
+ISSUE_URL_MAPPING = "https://github.com/dckiller51/trueachievements/issues/new?template=game-mapping.yml"
 
 # Configuration keys
 CONF_AUTH_STATUS = "auth_status"
