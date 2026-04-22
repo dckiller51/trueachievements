@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.4.0
+
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
+
 ## 2026.3.3
 
 - **Improved** Advanced Game Mapping: Added support for combined `Publisher | Platform` keys in `mapping.json`. This resolves conflicts for games with identical names and publishers across different console generations (e.g., Rugby 15 on Xbox 360 vs Xbox One).
