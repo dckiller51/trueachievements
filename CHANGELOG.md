@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.6.0
+
+- **Added** Notification Toggles: New options `notify_mapping` and `notify_auth_error` let you disable the persistent notifications for unmatched games and expired authentication independently, directly from the integration's Options flow. Resolves #27.
+- **Added** Notification Translations: Persistent notification titles and messages (game mapping alerts, auth errors) are now translatable via the `common` section of the language files, with automatic fallback to English if a translation is missing or incomplete.
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
+
 ## 2026.4.0
 
 - **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.

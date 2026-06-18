@@ -1,4 +1,10 @@
 {
+  "common": {
+    "auth_error_message": "The cookie for **{gamer_tag}** has expired.",
+    "auth_error_title": "TrueAchievements: Access Error",
+    "mapping_message": "Game **{game}** ({platform}) not matching. Publisher: {publisher}. [Report here]({issue_url})",
+    "mapping_title": "TrueAchievements: Action Required"
+  },
   "config": {
     "abort": {
       "already_configured": "This account is already configured."
@@ -16,6 +22,8 @@
           "gamertag": "Xbox Gamertag",
           "gamertoken": "Session Token (Cookie)",
           "games_file": "CSV File Path",
+          "notify_auth_error": "Notify on authentication error",
+          "notify_mapping": "Notify on unmatched games (mapping)",
           "now_playing_entity": "Xbox Tracked Entity (Now Playing)"
         },
         "description": "Enter your TrueAchievements credentials. You can find your GamerID in your profile URL and your GamerToken in your cookies (TrueGamingIdentity).",
@@ -85,6 +93,8 @@
         "data": {
           "excluded_apps": "Excluded Apps",
           "gamertoken": "Session Token (Cookie)",
+          "notify_auth_error": "Notify on authentication error",
+          "notify_mapping": "Notify on unmatched games (mapping)",
           "now_playing_entity": "Xbox Tracked Entity"
         }
       }
