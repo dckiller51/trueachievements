@@ -28,8 +28,12 @@ from .const import (
     CONF_GAMERTAG,
     CONF_GAMERTOKEN,
     CONF_GAMES_FILE,
+    CONF_NOTIFY_AUTH_ERROR,
+    CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     DEFAULT_GAMES_FILE,
+    DEFAULT_NOTIFY_AUTH_ERROR,
+    DEFAULT_NOTIFY_MAPPING,
     DOMAIN,
     ISSUE_URL_MAPPING,
     URL_EXPORT_COLLECTION,
@@ -63,8 +67,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.gamer_token: str = ""
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
+        self.notify_mapping: bool = DEFAULT_NOTIFY_MAPPING
+        self.notify_auth_error: bool = DEFAULT_NOTIFY_AUTH_ERROR
         self.mapping_file: Path = Path(__file__).parent / "mapping.json"
         self.game_mapping: dict[str, Any] = {}
+        self.translations_dir: Path = Path(__file__).parent / "translations"
+        self.notify_translations: dict[str, str] = {}
 
         now_playing_eid: str | None = entry.options.get(
             CONF_NOW_PLAYING_ENTITY, entry.data.get(CONF_NOW_PLAYING_ENTITY)
@@ -91,6 +99,18 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.excluded_apps = [
             app.strip().lower() for app in excluded_raw.split(",") if app.strip()
         ]
+        self.notify_mapping = bool(
+            opts.get(
+                CONF_NOTIFY_MAPPING,
+                dat.get(CONF_NOTIFY_MAPPING, DEFAULT_NOTIFY_MAPPING),
+            )
+        )
+        self.notify_auth_error = bool(
+            opts.get(
+                CONF_NOTIFY_AUTH_ERROR,
+                dat.get(CONF_NOTIFY_AUTH_ERROR, DEFAULT_NOTIFY_AUTH_ERROR),
+            )
+        )
 
     async def _handle_state_change(self, _event: Any) -> None:
         """Trigger a refresh when the Xbox game status changes."""
@@ -101,6 +121,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from TA with 24h safety lock or use local CSV."""
         self._update_local_config()
         self.game_mapping = await self.hass.async_add_executor_job(self._load_mapping)
+        self.notify_translations = await self.hass.async_add_executor_job(
+            self._load_notify_translations
+        )
 
         now = dt_util.now()
         should_download = True
@@ -168,6 +191,29 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception:  # pylint: disable=broad-exception-caught
             return {}
 
+    def _load_notify_translations(self) -> dict[str, str]:
+        """Load notification strings from the translation files.
+
+        Tries the HA-configured language first, then falls back to English.
+        Strings live under the "common" key so they can be shared with any
+        notification (persistent or mobile), independently of the config_flow
+        and entity translations.
+        """
+        language = self.hass.config.language
+        for lang in (language, "en"):
+            path = self.translations_dir / f"{lang}.json"
+            if not path.exists():
+                continue
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                common = data.get("common", {})
+                if isinstance(common, dict) and common:
+                    return {str(k): str(v) for k, v in common.items()}
+            except Exception:  # pylint: disable=broad-exception-caught
+                _LOGGER.debug("Failed to load notify translations for lang=%s", lang)
+        return {}
+
     def _write_file(self, content: bytes) -> None:
         """Physically save the CSV file."""
         self.games_file.parent.mkdir(parents=True, exist_ok=True)
@@ -175,13 +221,27 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _send_error_notification(self) -> None:
         """Send a persistent notification for expired credentials."""
+        if not self.notify_auth_error:
+            return
+
+        title = self.notify_translations.get(
+            "auth_error_title", "TrueAchievements: Access Error"
+        )
+        message_tpl = self.notify_translations.get(
+            "auth_error_message", "The cookie for **{gamer_tag}** has expired."
+        )
+        try:
+            message = message_tpl.format(gamer_tag=self.gamer_tag)
+        except Exception:  # pylint: disable=broad-exception-caught
+            message = f"The cookie for **{self.gamer_tag}** has expired."
+
         self.hass.add_job(
             self.hass.services.async_call,
             "persistent_notification",
             "create",
             {
-                "message": f"The cookie for **{self.gamer_tag}** has expired.",
-                "title": "TrueAchievements: Access Error",
+                "message": message,
+                "title": title,
                 "notification_id": "ta_access_error",
             },
         )
@@ -373,6 +433,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self, lookup_name: str, match_found: bool, current_name: str, info: dict
     ) -> None:
         """Handle 'Game not found' notifications."""
+        if not self.notify_mapping:
+            return
         if lookup_name and not match_found and lookup_name not in self._notified_games:
             if current_name.lower() not in (
                 "unavailable",
@@ -381,16 +443,35 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "offline_status",
             ):
                 self._notified_games.add(lookup_name)
+
+                title = self.notify_translations.get(
+                    "mapping_title", "TrueAchievements: Action Required"
+                )
+                message_tpl = self.notify_translations.get(
+                    "mapping_message",
+                    "Game **{game}** ({platform}) not matching. "
+                    "Publisher: {publisher}. [Report here]({issue_url})",
+                )
+                try:
+                    message = message_tpl.format(
+                        game=lookup_name,
+                        platform=info.get("platform"),
+                        publisher=info.get("publisher"),
+                        issue_url=ISSUE_URL_MAPPING,
+                    )
+                except Exception:  # pylint: disable=broad-exception-caught
+                    message = (
+                        f"Game **{lookup_name}** ({info.get('platform')}) not matching. "
+                        f"Publisher: {info.get('publisher')}. [Report here]({ISSUE_URL_MAPPING})"
+                    )
+
                 self.hass.add_job(
                     self.hass.services.async_call,
                     "persistent_notification",
                     "create",
                     {
-                        "title": "TrueAchievements: Action Required",
-                        "message": (
-                            f"Game **{lookup_name}** ({info.get('platform')}) not matching. "
-                            f"Publisher: {info.get('publisher')}. [Report here]({ISSUE_URL_MAPPING})"
-                        ),
+                        "title": title,
+                        "message": message,
                         "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
                     },
                 )

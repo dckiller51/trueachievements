@@ -2,7 +2,7 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.4.0"
+VERSION = "2026.6.0"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
@@ -16,6 +16,12 @@ CONF_GAMERTOKEN = "gamertoken"
 CONF_NOW_PLAYING_ENTITY = "now_playing_entity"
 CONF_EXCLUDED_APPS = "excluded_apps"
 CONF_GAMES_FILE = "games_file"
+CONF_NOTIFY_MAPPING = "notify_mapping"
+CONF_NOTIFY_AUTH_ERROR = "notify_auth_error"
+
+# Defaults for notification toggles
+DEFAULT_NOTIFY_MAPPING = True
+DEFAULT_NOTIFY_AUTH_ERROR = True
 
 # Default file paths
 # Note: These are usually stored within the /config/ folder of Home Assistant

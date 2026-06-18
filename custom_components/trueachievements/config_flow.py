@@ -20,8 +20,12 @@ from .const import (
     CONF_GAMERTAG,
     CONF_GAMERTOKEN,
     CONF_GAMES_FILE,
+    CONF_NOTIFY_AUTH_ERROR,
+    CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     DEFAULT_GAMES_FILE,
+    DEFAULT_NOTIFY_AUTH_ERROR,
+    DEFAULT_NOTIFY_MAPPING,
     DOMAIN,
 )
 
@@ -56,6 +60,12 @@ class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
                     ),
                     vol.Optional(CONF_EXCLUDED_APPS, default=""): str,
                     vol.Required(CONF_GAMES_FILE, default=DEFAULT_GAMES_FILE): str,
+                    vol.Optional(
+                        CONF_NOTIFY_MAPPING, default=DEFAULT_NOTIFY_MAPPING
+                    ): bool,
+                    vol.Optional(
+                        CONF_NOTIFY_AUTH_ERROR, default=DEFAULT_NOTIFY_AUTH_ERROR
+                    ): bool,
                 }
             ),
         )
@@ -89,6 +99,16 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
         current_now_playing = self.config_entry.options.get(
             CONF_NOW_PLAYING_ENTITY, self.config_entry.data.get(CONF_NOW_PLAYING_ENTITY)
         )
+        notify_mapping = self.config_entry.options.get(
+            CONF_NOTIFY_MAPPING,
+            self.config_entry.data.get(CONF_NOTIFY_MAPPING, DEFAULT_NOTIFY_MAPPING),
+        )
+        notify_auth_error = self.config_entry.options.get(
+            CONF_NOTIFY_AUTH_ERROR,
+            self.config_entry.data.get(
+                CONF_NOTIFY_AUTH_ERROR, DEFAULT_NOTIFY_AUTH_ERROR
+            ),
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -103,6 +123,10 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
                         )
                     ),
                     vol.Optional(CONF_EXCLUDED_APPS, default=excluded): str,
+                    vol.Optional(CONF_NOTIFY_MAPPING, default=notify_mapping): bool,
+                    vol.Optional(
+                        CONF_NOTIFY_AUTH_ERROR, default=notify_auth_error
+                    ): bool,
                 }
             ),
         )
