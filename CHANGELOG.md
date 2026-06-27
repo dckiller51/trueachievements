@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.6.1
+
+- **Fixed** TrueAchievements Authentication: Enhanced the integration's request headers with full Cloudflare (`cf_clearance`) and session cookie strings along with a realistic User-Agent to bypass strict anti-bot protections and prevent 401/403 access errors.
+- **Improved** Game Matching: Updated `mapping.json` with new titles and platform fixes for better accuracy.
+
 ## 2026.6.0
 
 - **Added** Notification Toggles: New options `notify_mapping` and `notify_auth_error` let you disable the persistent notifications for unmatched games and expired authentication independently, directly from the integration's Options flow. Resolves #27.

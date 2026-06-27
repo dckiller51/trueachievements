@@ -150,11 +150,22 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return data
 
     async def _download_csv(self, now: Any) -> None:
-        """Handle the CSV download logic."""
+        """Handle the CSV download logic with full Cloudflare and session cookies."""
+        # Injecting all necessary authentication and security cookies
+        cookie_string = (
+            f"TrueGamingIdentity={self.gamer_token}; "
+            f"GamerToken={self.gamer_token}; "
+            f"GamerID={self.gamer_id}; "
+            f"ASP.NET_SessionId=4sq0eqivdkzuaircphm3nn3t; "
+            f"cf_clearance=vWuPsiWZsHbYXcCtQ04Rqcwl17td6wcAJNhV8qbUQF4-1782540858-1.2.1.1-a3VCg43z62mZi_mJpyZ7FEWSbNmE2.Et0lkvmsvt6.xzdKm5Q7zObio2XX1eF4lLSaCXVnAZ7ekCc0Rat6bUZFi5Ti1Ewplo1U8YEbm_RvXHYYgzZJ8AmScqNmzHaJjf3kadJCWiRu._U.P7HFEB_h46FLMvl0_yIWPNiAlrglpCxOGxQyteyAR6UeyHKIg49hC1hTzzu39tO3VBvNM6f2ebZc9MUcVzXVDcRcnLRpi5NQi8uwSxpd.5dl13yQXRsAIoK815KSo8.naC6EDluHZbkVMD_EGUz0fRs7oXVOv.95NncsEfJMd.vMaZlnpuaYnKH.IstFOQ9MzrcGGDoA"
+        )
+
         headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Cookie": f"TrueGamingIdentity={self.gamer_token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Cookie": cookie_string,
             "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
         }
         try:
             url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
@@ -170,9 +181,13 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
                         self.auth_failed = False
                     else:
+                        _LOGGER.error(
+                            "Received file is empty or malformed (Blocked by Cloudflare/Verification)"
+                        )
                         self.auth_failed = True
                         self._send_error_notification()
                 elif resp.status in (401, 403):
+                    _LOGGER.error("Access denied by server (Error %s)", resp.status)
                     self.auth_failed = True
                     self._send_error_notification()
         except Exception as err:  # pylint: disable=broad-exception-caught
