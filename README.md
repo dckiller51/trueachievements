@@ -6,6 +6,7 @@
 [![GH-downloads](https://img.shields.io/github/downloads/dckiller51/trueachievements/total?style=flat-square)](https://github.com/dckiller51/trueachievements/releases)
 [![GH-last-commit](https://img.shields.io/github/last-commit/dckiller51/trueachievements.svg?style=flat-square)](https://github.com/dckiller51/trueachievements/commits/main)
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=flat-square)](https://github.com/hacs)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy_me_a_coffee-F16061?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/dckiller)
 
 ## Overview
 
