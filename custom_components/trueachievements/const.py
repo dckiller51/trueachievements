@@ -2,7 +2,7 @@
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.6.1"
+VERSION = "2026.9.0"
 
 # GitHub URLs
 ISSUE_URL = "https://github.com/dckiller51/trueachievements/issues"
@@ -13,6 +13,7 @@ CONF_AUTH_STATUS = "auth_status"
 CONF_GAMERTAG = "gamertag"
 CONF_GAMER_ID = "gamer_id"
 CONF_GAMERTOKEN = "gamertoken"
+CONF_MAPPING_FILE = "mapping_file"
 CONF_NOW_PLAYING_ENTITY = "now_playing_entity"
 CONF_EXCLUDED_APPS = "excluded_apps"
 CONF_GAMES_FILE = "games_file"
@@ -27,6 +28,7 @@ DEFAULT_NOTIFY_AUTH_ERROR = True
 # Note: These are usually stored within the /config/ folder of Home Assistant
 DEFAULT_GAMES_FILE = "trueachievements/games.csv"
 DEFAULT_ACHIEVEMENTS_FILE = "trueachievements/achievements.csv"
+DEFAULT_MAPPING_FILE = "trueachievements/mapping.json"
 
 # TrueAchievements URLs
 # Use gamecollection export to get all game stats for a specific GamerID

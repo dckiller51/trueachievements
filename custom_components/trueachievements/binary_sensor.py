@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -61,6 +62,7 @@ class TABinarySensorEntity(
     """Representation of a TrueAchievements binary sensor."""
 
     entity_description: TABinarySensorEntityDescription
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = True
 
     def __init__(

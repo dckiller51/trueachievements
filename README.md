@@ -129,13 +129,18 @@ To ensure a successful connection, you should copy the full cookie string from y
 
 This usually happens when the name provided by the **Xbox integration** doesn't perfectly match the name in the **TrueAchievements database** (e.g., `Roblox - Xbox` vs `ROBLOX`).
 
-1. **Check your notifications:** Home Assistant will alert you if a mismatch is detected.
-2. **Report the mismatch:** Open a request using our [Game Mapping Form](https://github.com/dckiller51/trueachievements/issues/new?template=game-mapping.yml).
-3. **Provide context:** Some games exist on multiple platforms (Xbox 360, Xbox One, Series X|S). If the name is identical but the stats are wrong, please specify the **Publisher** and **Platform** shown in your sensor attributes.
-4. **Include details:** Provide the exact name shown in Home Assistant and the link to the game's page on TrueAchievements.
+1. **Check your notification:** Home Assistant will alert you if a mismatch is detected, with the exact mapping entry to add.
+2. **Fix it yourself:** Copy the bundled `mapping.json` to `/config/trueachievements/mapping.json` (see [Custom Game Mapping](#custom-game-mapping)) and add the entry shown in the notification.
+3. **Reload:** Press the **"Reload game mapping"** button on the device page — the notification disappears automatically once the game matches.
 
 > [!NOTE]
-> We regularly update the internal dictionary (`mapping.json`) to fix these naming inconsistencies and handle cross-generation title conflicts.
+> Some games exist on multiple platforms (Xbox 360, Xbox One, Series X|S) with identical names. If the stats look wrong, use the advanced `publisher|platform` format in your mapping file.
+
+**Still stuck?** If the game still doesn't match after adding your entry, open a request using our [Game Mapping Form](https://github.com/dckiller51/trueachievements/issues/new?template=game-mapping.yml) and provide:
+
+- The exact name shown in Home Assistant (sensor state),
+- The **Publisher** and **Platform** attributes,
+- The link to the game's page on TrueAchievements.
 
 ## Privacy & Security
 
@@ -144,6 +149,9 @@ This usually happens when the name provided by the **Xbox integration** doesn't 
 - This integration **never** sends your token to any third-party server.
 - The token is only used to communicate directly with `www.trueachievements.com` to download your CSV file.
 - It is stored securely within the Home Assistant internal configuration.
+
+> [!WARNING]
+> The `GamerToken` field must contain your **entire** cookie string (all `name=value;` pairs), not just a single value. Never share this string publicly (forums, screenshots, chat logs, issue reports) — it grants full access to your TrueAchievements session until it expires or is revoked.
 
 ## Credits
 

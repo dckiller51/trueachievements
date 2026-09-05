@@ -11,7 +11,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import DOMAIN, STARTUP_MESSAGE
 from .coordinator import TrueAchievementsCoordinator
 
-PLATFORMS: list[str] = ["binary_sensor", "sensor"]
+PLATFORMS: list[str] = ["binary_sensor", "button", "sensor"]
 _LOGGER = logging.getLogger(__name__)
 
 
