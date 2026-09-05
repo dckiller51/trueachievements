@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Added** Reload Mapping Button: A new "Reload game mapping" button is available on the device page (Configuration section). Press it after editing your mapping file to apply changes immediately — no restart, no waiting for the next poll.
 - **Improved** Mapping Notifications: The "Game not matching" notification now tells you exactly how to fix it yourself: add the entry to `trueachievements/mapping.json` and press the reload button, instead of redirecting to a GitHub issue.
 - **Added** Smart Notification Cleanup: Once a game matches successfully (e.g., after your mapping fix and a reload), its pending notification is automatically dismissed.
-- **Fixed** Game Matching: Resolved the name mapping for **Clone Drone in the Danger Zone**. Resolves #56.
+- **Fixed** Game Matching: Resolved the name mapping for **Clone Drone in the Danger Zone**. Resolves [#56](https://github.com/dckiller51/trueachievements/issues/56).
 - **Added** Diagnostics Support: Download a diagnostic report from the integration page. Authentication token is automatically redacted.
 - **Improved** Entity Organization: The auth status binary sensor is now categorized as Diagnostic, keeping the device page focused on game stats.
 
