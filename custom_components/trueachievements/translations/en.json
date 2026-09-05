@@ -2,7 +2,7 @@
   "common": {
     "auth_error_message": "The cookie for **{gamer_tag}** has expired.",
     "auth_error_title": "TrueAchievements: Access Error",
-    "mapping_message": "Game **{game}** ({platform}) not matching. Publisher: {publisher}. [Report here]({issue_url})",
+    "mapping_message": "Game **{game}** ({platform}) not matching. Publisher: {publisher}. Add `\"{game}\": \"TrueAchievements name\"` to `trueachievements/mapping.json` and press the **Reload game mapping** button.",
     "mapping_title": "TrueAchievements: Action Required"
   },
   "config": {
@@ -39,6 +39,9 @@
           "last_update": { "name": "Last Sync Attempt" }
         }
       }
+    },
+    "button": {
+      "reload_mapping": { "name": "Reload game mapping" }
     },
     "sensor": {
       "completed_games": {

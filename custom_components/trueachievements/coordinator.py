@@ -28,10 +28,12 @@ from .const import (
     CONF_GAMERTAG,
     CONF_GAMERTOKEN,
     CONF_GAMES_FILE,
+    CONF_MAPPING_FILE,
     CONF_NOTIFY_AUTH_ERROR,
     CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     DEFAULT_GAMES_FILE,
+    DEFAULT_MAPPING_FILE,
     DEFAULT_NOTIFY_AUTH_ERROR,
     DEFAULT_NOTIFY_MAPPING,
     DOMAIN,
@@ -69,7 +71,13 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.excluded_apps: list[str] = []
         self.notify_mapping: bool = DEFAULT_NOTIFY_MAPPING
         self.notify_auth_error: bool = DEFAULT_NOTIFY_AUTH_ERROR
-        self.mapping_file: Path = Path(__file__).parent / "mapping.json"
+        conf_mapping = str(
+            entry.options.get(
+                CONF_MAPPING_FILE,
+                entry.data.get(CONF_MAPPING_FILE, DEFAULT_MAPPING_FILE),
+            )
+        )
+        self.mapping_file: Path = Path(self.hass.config.path(conf_mapping))
         self.game_mapping: dict[str, Any] = {}
         self.translations_dir: Path = Path(__file__).parent / "translations"
         self.notify_translations: dict[str, str] = {}
@@ -120,7 +128,9 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from TA with 24h safety lock or use local CSV."""
         self._update_local_config()
-        self.game_mapping = await self.hass.async_add_executor_job(self._load_mapping)
+        self.game_mapping = await self.hass.async_add_executor_job(
+            self._load_mapping_file
+        )
         self.notify_translations = await self.hass.async_add_executor_job(
             self._load_notify_translations
         )
@@ -150,19 +160,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return data
 
     async def _download_csv(self, now: Any) -> None:
-        """Handle the CSV download logic with full Cloudflare and session cookies."""
-        # Injecting all necessary authentication and security cookies
-        cookie_string = (
-            f"TrueGamingIdentity={self.gamer_token}; "
-            f"GamerToken={self.gamer_token}; "
-            f"GamerID={self.gamer_id}; "
-            f"ASP.NET_SessionId=4sq0eqivdkzuaircphm3nn3t; "
-            f"cf_clearance=vWuPsiWZsHbYXcCtQ04Rqcwl17td6wcAJNhV8qbUQF4-1782540858-1.2.1.1-a3VCg43z62mZi_mJpyZ7FEWSbNmE2.Et0lkvmsvt6.xzdKm5Q7zObio2XX1eF4lLSaCXVnAZ7ekCc0Rat6bUZFi5Ti1Ewplo1U8YEbm_RvXHYYgzZJ8AmScqNmzHaJjf3kadJCWiRu._U.P7HFEB_h46FLMvl0_yIWPNiAlrglpCxOGxQyteyAR6UeyHKIg49hC1hTzzu39tO3VBvNM6f2ebZc9MUcVzXVDcRcnLRpi5NQi8uwSxpd.5dl13yQXRsAIoK815KSo8.naC6EDluHZbkVMD_EGUz0fRs7oXVOv.95NncsEfJMd.vMaZlnpuaYnKH.IstFOQ9MzrcGGDoA"
-        )
-
+        """Handle the CSV download logic using the full session cookie provided by the user."""
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Cookie": cookie_string,
+            "Cookie": self.gamer_token,
             "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
@@ -193,18 +194,34 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.error("Network error during update: %s", err)
 
-    def _load_mapping(self) -> dict[str, Any]:
+    def _get_mapping_file(self) -> Path:
+        """Return the user mapping file if it exists, else the bundled one."""
+        if self.mapping_file.exists():
+            return self.mapping_file
+        return Path(__file__).parent / "mapping.json"
+
+    def _load_mapping_file(self) -> dict[str, Any]:
         """Load mapping and normalize keys to lowercase."""
-        if not self.mapping_file.exists():
+        mapping_file = self._get_mapping_file()
+        if not mapping_file.exists():
             return {}
         try:
-            with open(self.mapping_file, encoding="utf-8") as f:
+            with open(mapping_file, encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
                     return {k.lower().strip(): v for k, v in data.items()}
                 return {}
         except Exception:  # pylint: disable=broad-exception-caught
+            _LOGGER.error("Failed to load mapping file: %s", mapping_file)
             return {}
+
+    async def async_reload_mapping(self) -> None:
+        """Force reload of the mapping file and refresh the data."""
+        self.game_mapping = await self.hass.async_add_executor_job(
+            self._load_mapping_file
+        )
+        _LOGGER.info("Mapping reloaded: %s entries", len(self.game_mapping))
+        await self.async_request_refresh()
 
     def _load_notify_translations(self) -> dict[str, str]:
         """Load notification strings from the translation files.
@@ -316,6 +333,8 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self.games_file.exists():
             return {}
 
+        name_only_fallback: dict[str, Any] | None = None
+
         try:
             with open(self.games_file, encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
@@ -341,7 +360,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # Safe conversion
                     row_vals = self._get_row_values(row)
 
-                    # Matching Logic
+                    # Matching Logic — name+platform match takes priority,
+                    # falling back to name-only if no row matches the
+                    # platform (TA can dynamically change the platform
+                    # label based on the last console used)
                     if not match_found and target_name_low == name_csv.lower().strip():
                         if not current_plat or (
                             current_plat in plat_csv or plat_csv in current_plat
@@ -350,6 +372,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                 row, current_name, current_pub.title(), row_vals
                             )
                             match_found = True
+                        elif name_only_fallback is None:
+                            name_only_fallback = self._build_current_game_dict(
+                                row, current_name, current_pub.title(), row_vals
+                            )
 
                     # Accumulation
                     if row_vals["ach_won"] > 0:
@@ -360,6 +386,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         stats["started"] += 1
                         if row_vals["ach_won"] >= row_vals["ach_max"] > 0:
                             stats["completed"] += 1
+
+                if not match_found and name_only_fallback is not None:
+                    current_game_stats = name_only_fallback
+                    match_found = True
 
             self._handle_not_found_notification(
                 lookup_name, match_found, current_name, safe_info
@@ -447,46 +477,69 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _handle_not_found_notification(
         self, lookup_name: str, match_found: bool, current_name: str, info: dict
     ) -> None:
-        """Handle 'Game not found' notifications."""
-        if not self.notify_mapping:
-            return
-        if lookup_name and not match_found and lookup_name not in self._notified_games:
-            if current_name.lower() not in (
-                "unavailable",
-                "unknown",
-                "idle",
-                "offline_status",
-            ):
-                self._notified_games.add(lookup_name)
+        """Handle 'Game not found' notifications: create on miss, dismiss on match."""
+        notify_key = current_name or lookup_name
+        notification_id = f"ta_fix_{notify_key.replace(' ', '_')}"
 
-                title = self.notify_translations.get(
-                    "mapping_title", "TrueAchievements: Action Required"
-                )
-                message_tpl = self.notify_translations.get(
-                    "mapping_message",
-                    "Game **{game}** ({platform}) not matching. "
-                    "Publisher: {publisher}. [Report here]({issue_url})",
-                )
-                try:
-                    message = message_tpl.format(
-                        game=lookup_name,
-                        platform=info.get("platform"),
-                        publisher=info.get("publisher"),
-                        issue_url=ISSUE_URL_MAPPING,
-                    )
-                except Exception:  # pylint: disable=broad-exception-caught
-                    message = (
-                        f"Game **{lookup_name}** ({info.get('platform')}) not matching. "
-                        f"Publisher: {info.get('publisher')}. [Report here]({ISSUE_URL_MAPPING})"
-                    )
-
+        # Game matched again after a mapping fix: dismiss the pending notification
+        if match_found:
+            if notify_key in self._notified_games:
+                self._notified_games.discard(notify_key)
                 self.hass.add_job(
                     self.hass.services.async_call,
                     "persistent_notification",
-                    "create",
-                    {
-                        "title": title,
-                        "message": message,
-                        "notification_id": f"ta_fix_{lookup_name.replace(' ', '_')}",
-                    },
+                    "dismiss",
+                    {"notification_id": notification_id},
                 )
+            return
+
+        if not self.notify_mapping:
+            return
+        if not lookup_name or notify_key in self._notified_games:
+            return
+        if current_name.lower() in (
+            "unavailable",
+            "unknown",
+            "idle",
+            "offline_status",
+        ):
+            return
+
+        self._notified_games.add(notify_key)
+
+        title = self.notify_translations.get(
+            "mapping_title",
+            "TrueAchievements: Access Error".replace("Access Error", "Action Required"),
+        )
+        message_tpl = self.notify_translations.get(
+            "mapping_message",
+            "Game **{game}** ({platform}) not matching. "
+            "Publisher: {publisher}. "
+            "Add it to `trueachievements/mapping.json` "
+            "and press the reload button.",
+        )
+        try:
+            message = message_tpl.format(
+                game=current_name,
+                platform=info.get("platform"),
+                publisher=info.get("publisher"),
+                issue_url=ISSUE_URL_MAPPING,
+            )
+        except Exception:  # pylint: disable=broad-exception-caught
+            message = (
+                f"Game **{current_name}** ({info.get('platform')}) not matching. "
+                f"Publisher: {info.get('publisher')}. "
+                "Add it to `trueachievements/mapping.json` "
+                "and press the reload button."
+            )
+
+        self.hass.add_job(
+            self.hass.services.async_call,
+            "persistent_notification",
+            "create",
+            {
+                "title": title,
+                "message": message,
+                "notification_id": notification_id,
+            },
+        )

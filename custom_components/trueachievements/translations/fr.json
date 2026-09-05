@@ -2,7 +2,7 @@
   "common": {
     "auth_error_message": "Le cookie pour **{gamer_tag}** a expiré.",
     "auth_error_title": "TrueAchievements : erreur d'accès",
-    "mapping_message": "Le jeu **{game}** ({platform}) ne correspond à aucune entrée. Éditeur : {publisher}. [Signaler ici]({issue_url})",
+    "mapping_message": "Le jeu **{game}** ({platform}) ne correspond à aucune entrée. Éditeur : {publisher}. Ajoutez `\"{game}\": \"nom TrueAchievements\"` dans `trueachievements/mapping.json` puis appuyez sur le bouton **Recharger le mapping des jeux**.",
     "mapping_title": "TrueAchievements : action requise"
   },
   "config": {
@@ -39,6 +39,9 @@
           "last_update": { "name": "Dernière tentative de synchro" }
         }
       }
+    },
+    "button": {
+      "reload_mapping": { "name": "Recharger le mapping des jeux" }
     },
     "sensor": {
       "completed_games": {

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.9.0
+
+- **Added** User-Managed Game Mapping: `mapping.json` is no longer tied to integration releases. You can now maintain your own mapping file in your Home Assistant configuration folder (default: `trueachievements/mapping.json`, next to `games.csv`). The integration reads the user file first and falls back to the bundled mapping if it's missing. No more waiting for a new release to fix a game name mismatch.
+- **Added** Reload Mapping Button: A new "Reload game mapping" button is available on the device page (Configuration section). Press it after editing your mapping file to apply changes immediately — no restart, no waiting for the next poll.
+- **Improved** Mapping Notifications: The "Game not matching" notification now tells you exactly how to fix it yourself: add the entry to `trueachievements/mapping.json` and press the reload button, instead of redirecting to a GitHub issue.
+- **Added** Smart Notification Cleanup: Once a game matches successfully (e.g., after your mapping fix and a reload), its pending notification is automatically dismissed.
+- **Fixed** Game Matching: Resolved the name mapping for **Clone Drone in the Danger Zone**. Resolves #56.
+- **Added** Diagnostics Support: Download a diagnostic report from the integration page. Authentication token is automatically redacted.
+- **Improved** Entity Organization: The auth status binary sensor is now categorized as Diagnostic, keeping the device page focused on game stats.
+
 ## 2026.6.1
 
 - **Fixed** TrueAchievements Authentication: Enhanced the integration's request headers with full Cloudflare (`cf_clearance`) and session cookie strings along with a realistic User-Agent to bypass strict anti-bot protections and prevent 401/403 access errors.
