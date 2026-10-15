@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
+import probatio
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -48,22 +48,22 @@ class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
         # Show the configuration form to the user
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_GAMERTAG): str,
-                    vol.Required(CONF_GAMER_ID): str,
-                    vol.Required(CONF_GAMERTOKEN): str,
-                    vol.Optional(CONF_NOW_PLAYING_ENTITY): selector.EntitySelector(
+                    probatio.Required(CONF_GAMERTAG): str,
+                    probatio.Required(CONF_GAMER_ID): str,
+                    probatio.Required(CONF_GAMERTOKEN): str,
+                    probatio.Optional(CONF_NOW_PLAYING_ENTITY): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             integration="xbox", domain="sensor"
                         )
                     ),
-                    vol.Optional(CONF_EXCLUDED_APPS, default=""): str,
-                    vol.Required(CONF_GAMES_FILE, default=DEFAULT_GAMES_FILE): str,
-                    vol.Optional(
+                    probatio.Optional(CONF_EXCLUDED_APPS, default=""): str,
+                    probatio.Required(CONF_GAMES_FILE, default=DEFAULT_GAMES_FILE): str,
+                    probatio.Optional(
                         CONF_NOTIFY_MAPPING, default=DEFAULT_NOTIFY_MAPPING
                     ): bool,
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_NOTIFY_AUTH_ERROR, default=DEFAULT_NOTIFY_AUTH_ERROR
                     ): bool,
                 }
@@ -112,19 +112,21 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_GAMERTOKEN, default=token): str,
-                    vol.Optional(
+                    probatio.Required(CONF_GAMERTOKEN, default=token): str,
+                    probatio.Optional(
                         CONF_NOW_PLAYING_ENTITY, default=current_now_playing
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             integration="xbox", domain="sensor"
                         )
                     ),
-                    vol.Optional(CONF_EXCLUDED_APPS, default=excluded): str,
-                    vol.Optional(CONF_NOTIFY_MAPPING, default=notify_mapping): bool,
-                    vol.Optional(
+                    probatio.Optional(CONF_EXCLUDED_APPS, default=excluded): str,
+                    probatio.Optional(
+                        CONF_NOTIFY_MAPPING, default=notify_mapping
+                    ): bool,
+                    probatio.Optional(
                         CONF_NOTIFY_AUTH_ERROR, default=notify_auth_error
                     ): bool,
                 }
