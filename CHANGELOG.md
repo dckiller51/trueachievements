@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.10.0
+
+- **Improved** Home Assistant 2026.9+ Compatibility: The config flow now uses [Probatio](https://pypi.org/project/probatio/), the validation engine that replaces voluptuous in Home Assistant Core 2026.9.
+
 ## 2026.9.0
 
 - **Added** User-Managed Game Mapping: `mapping.json` is no longer tied to integration releases. You can now maintain your own mapping file in your Home Assistant configuration folder (default: `trueachievements/mapping.json`, next to `games.csv`). The integration reads the user file first and falls back to the bundled mapping if it's missing. No more waiting for a new release to fix a game name mismatch.
