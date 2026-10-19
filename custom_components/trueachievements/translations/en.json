@@ -29,7 +29,7 @@
           "user_agent": "Browser User-Agent"
         },
         "data_description": {
-          "file_only": "Do not download anything from Home Assistant: only read the CSV file (for example one written by the TrueAchievements export add-on). No cookie is needed.",
+          "file_only": "Do not download anything from Home Assistant: only read the CSV file (sent by the TrueAchievements Sync Firefox extension, for example). No cookie is needed.",
           "gamertoken": "Optional. Your full cookie string (all name=value; pairs) copied from your browser. Not needed in local file only mode.",
           "user_agent": "Optional. The exact User-Agent of the browser the cookie was copied from (run navigator.userAgent in the browser console). Leave empty to use the default."
         },
@@ -134,11 +134,11 @@
           "user_agent": "Browser User-Agent"
         },
         "data_description": {
-          "file_only": "Do not download anything from Home Assistant: only read the CSV file (for example one written by the TrueAchievements export add-on). No cookie is needed.",
+          "file_only": "Do not download anything from Home Assistant: only read the CSV file (sent by the TrueAchievements Sync Firefox extension, for example). No cookie is needed.",
           "gamertoken": "Optional. Your full cookie string (all name=value; pairs) copied from your browser. Not needed in local file only mode.",
           "user_agent": "Optional. The exact User-Agent of the browser the cookie was copied from (run navigator.userAgent in the browser console). Leave empty to use the default."
         },
-        "description": "To send the CSV from another computer, POST the file to your Home Assistant address followed by: {webhook_path}"
+        "description": "Upload address for the TrueAchievements Sync Firefox extension (keep it secret). Append it to your Home Assistant address: {webhook_path}"
       }
     }
   }

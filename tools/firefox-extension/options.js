@@ -1,6 +1,6 @@
 "use strict";
 
-const fields = ["webhook", "gamertag", "gamerId", "interval"];
+const fields = ["webhook", "gamertag", "gamerId"];
 
 function showStatus(status) {
   const box = document.getElementById("status");
@@ -24,9 +24,9 @@ document.getElementById("save").addEventListener("click", async () => {
   const values = {};
   for (const name of fields)
     values[name] = document.getElementById(name).value.trim();
-  values.interval = Math.max(5, Number(values.interval) || 20);
   await browser.storage.local.set(values);
-  document.getElementById("status").textContent = "Saved.";
+  document.getElementById("status").textContent =
+    "Saved. Press Sync now to test.";
 });
 
 document.getElementById("run").addEventListener("click", async () => {

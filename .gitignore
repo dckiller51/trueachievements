@@ -14,7 +14,6 @@ ENV/
 .storage/
 *.db
 *.log
-.coverage
 
 # Mypy / Ruff cache
 .mypy_cache/

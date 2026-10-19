@@ -29,7 +29,7 @@
           "user_agent": "User-Agent du navigateur"
         },
         "data_description": {
-          "file_only": "Ne rien télécharger depuis Home Assistant : lit seulement le fichier CSV (par exemple écrit par l'add-on d'export TrueAchievements). Aucun cookie n'est nécessaire.",
+          "file_only": "Ne rien télécharger depuis Home Assistant : lit seulement le fichier CSV (envoyé par exemple par l'extension Firefox TrueAchievements Sync). Aucun cookie n'est nécessaire.",
           "gamertoken": "Facultatif. Votre chaîne de cookies complète (toutes les paires nom=valeur;) copiée depuis votre navigateur. Inutile en mode fichier local uniquement.",
           "user_agent": "Facultatif. Le User-Agent exact du navigateur d'où le cookie a été copié (tapez navigator.userAgent dans la console du navigateur). Laissez vide pour utiliser la valeur par défaut."
         },
@@ -134,11 +134,11 @@
           "user_agent": "User-Agent du navigateur"
         },
         "data_description": {
-          "file_only": "Ne rien télécharger depuis Home Assistant : lit seulement le fichier CSV (par exemple écrit par l'add-on d'export TrueAchievements). Aucun cookie n'est nécessaire.",
+          "file_only": "Ne rien télécharger depuis Home Assistant : lit seulement le fichier CSV (envoyé par exemple par l'extension Firefox TrueAchievements Sync). Aucun cookie n'est nécessaire.",
           "gamertoken": "Facultatif. Votre chaîne de cookies complète (toutes les paires nom=valeur;) copiée depuis votre navigateur. Inutile en mode fichier local uniquement.",
           "user_agent": "Facultatif. Le User-Agent exact du navigateur d'où le cookie a été copié (tapez navigator.userAgent dans la console du navigateur). Laissez vide pour utiliser la valeur par défaut."
         },
-        "description": "Pour envoyer le CSV depuis un autre ordinateur, envoyez le fichier en POST à l'adresse de votre Home Assistant suivie de : {webhook_path}"
+        "description": "Adresse d'envoi pour l'extension Firefox TrueAchievements Sync (gardez-la secrète). Ajoutez-la à l'adresse de votre Home Assistant : {webhook_path}"
       }
     }
   }

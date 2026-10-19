@@ -14,7 +14,7 @@ Bring your Xbox accomplishments into Home Assistant! This integration synchroniz
 
 ## How it Works
 
-The integration utilizes the TrueAchievements CSV export feature to fetch your data. It periodically scans your collection and, when linked with a Home Assistant Xbox sensor, triggers an immediate refresh whenever you switch games.
+The integration utilizes the TrueAchievements CSV export feature to fetch your data. TrueAchievements is protected by Cloudflare, which blocks Home Assistant from downloading the file for long, so the **recommended setup** is to let **Firefox, where you are signed in, send the CSV to Home Assistant** (see [Recommended setup](#recommended-setup-firefox-extension)). When linked with a Home Assistant Xbox sensor, a refresh is triggered whenever you switch games.
 
 **Key Features:**
 
@@ -26,8 +26,9 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 ## Prerequisites
 
 1. **TrueAchievements PRO Account:** You must have an active **Pro** subscription. This is required to access the `download.aspx?type=gamecollection` export used by this integration.
-2. **GamerID & Token:** You will need your numeric GamerID and your full session cookie string.
-3. **Xbox Integration (Optional but Recommended):** To enable instant "Now Playing" updates, you should have the official Home Assistant Xbox integration installed.
+2. **GamerID:** Your numeric TrueAchievements ID (see the FAQ).
+3. **Firefox** (desktop or Android) signed in to TrueAchievements, for the recommended setup. A session cookie (**GamerToken**) is only needed if you do not use it.
+4. **Xbox Integration (Optional but Recommended):** To enable instant "Now Playing" updates, you should have the official Home Assistant Xbox integration installed.
 
 ## Installation
 
@@ -52,10 +53,26 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
 3. **Setup fields:**
    - **Gamertag:** Your Xbox name.
    - **GamerID:** Your unique numeric ID from TrueAchievements.
-   - **GamerToken:** Your full session cookie value (see below).
+   - **GamerToken:** (Optional) Your full session cookie value. Leave it empty with the recommended setup.
    - **User-Agent:** (Optional) The User-Agent of the browser you copied the cookie from.
+   - **Local file only:** Enable it with the recommended setup: Home Assistant then never downloads anything, it only uses the CSV sent by Firefox.
    - **Now Playing Entity:** Select your Xbox `sensor.xbox_now_playing`.
    - **Excluded Apps:** (Optional) List apps like "YouTube" or "Netflix" to ignore them in stats.
+
+## Recommended setup: Firefox extension
+
+1. Add the integration (above) and tick **Local file only**.
+2. Open the integration **Configure** (options) page: it shows your private **upload address** (`/api/webhook/...`). Keep it secret, anyone on your network who knows it can replace your CSV.
+3. Install **TrueAchievements Sync** from [Mozilla Add-ons](https://addons.mozilla.org/addon/3100079/) in Firefox (desktop or Android) and sign in to [trueachievements.com](https://www.trueachievements.com) in that browser.
+4. Open the extension settings and fill:
+   - the **upload address**: the address of your Home Assistant followed by the path from step 2, for example `http://192.168.1.10:8123/api/webhook/...` (prefer the IP address to a `.local` name on Android),
+   - your **gamertag** and your **GamerID**.
+5. Press **Sync now**. The status shows whether the CSV reached Home Assistant.
+
+The extension synchronises when Firefox starts and nothing runs in the background afterwards. Open its settings to check the last result and press **Sync now** if it failed. If the server answers with an empty file, it reloads a TrueAchievements tab (or opens your profile in a background tab) and tries again once. Home Assistant keeps the last CSV it received, so nothing breaks while Firefox is closed: the statistics are simply not refreshed.
+
+> [!NOTE]
+> The extension only talks to trueachievements.com and to the upload address you enter. It sends nothing to any third party.
 
 ## Sensors Created
 
@@ -112,36 +129,20 @@ Your **GamerID** is the number found in the URL when you visit your own profile 
 `https://www.trueachievements.com/gamer/YourName?gamerid=123456`
 In this example, the ID is `123456`.
 
-### Where can I find my GamerToken? (Reliable Method)
+### Where can I find my GamerToken? (only without the extension)
 
-To ensure a successful connection, you should copy the full cookie string from your browser headers:
+With the [recommended setup](#recommended-setup-firefox-extension) you do not need it. Otherwise, copy the full cookie string from your browser headers:
 
 1. Log in to [TrueAchievements](https://www.trueachievements.com) in your desktop browser.
-2. Open the **Developer Tools** (`F12` or `Right-click > Inspect`).
-3. Go to the **Network** tab.
-4. Refresh the page (`F5`).
-5. Click on the first request (usually named after your Gamertag or the main page).
-6. In the right-hand panel, locate the **Request Headers** section.
-7. Find the line labeled **cookie:**.
-8. Copy the **entire value** (a long string usually starting with `ASP.NET_SessionId=...`).
-9. Paste this full string into the **GamerToken** field in Home Assistant.
+2. Open the **Developer Tools** (`F12`), go to the **Network** tab and refresh the page (`F5`).
+3. Click on the first request, find the **cookie:** line in **Request Headers** and copy the **entire value** (a long string usually starting with `ASP.NET_SessionId=...`).
+4. Paste it into the **GamerToken** field in Home Assistant.
 
-### Why does the download stop working after a while?
+Home Assistant then tries to download the CSV itself (at most once an hour), but Cloudflare only lets it through for a short time, so the cookie has to be renewed by hand.
 
-TrueAchievements is protected by Cloudflare, which only lets a real browser through after a while. A cookie pasted into Home Assistant therefore stops working after roughly an hour, and nothing an integration can do (other cookies, FlareSolverr, a Chrome-like TLS client...) changes that.
+### Why does the download from Home Assistant stop working after a while?
 
-The reliable solution is to let a **real browser where you are signed in** download the CSV and send it to Home Assistant, and to switch the integration to **Local file only**. A real, signed-in browser that visits your profile page regularly keeps its session, and Cloudflare lets it through. Home Assistant itself cannot do this: Cloudflare shows a "Verify you are human" check that only a human can pass.
-
-First, in the integration options, enable **Local file only**. The options form then shows the **upload address** (`/api/webhook/...`) of your integration (it is also written in the Home Assistant log). Keep it secret: anyone on your network who knows it can replace your CSV. Then pick one of the two tools:
-
-**Firefox extension** (recommended), on a phone or a computer that stays on. It runs in the browser where you are signed in to trueachievements.com and sends the CSV to Home Assistant on its own. Install it from Mozilla Add-ons: <https://addons.mozilla.org/addon/3100079/> (works on Firefox for desktop and Firefox for Android; the source is in `tools/firefox-extension`). Open its settings and fill the upload address (prefer the IP address of Home Assistant to a `.local` name on Android), your gamertag and your GamerID, then press _Sync now_. It synchronises when Firefox starts, then every hour while Firefox is open. If the server answers with an empty file, it reloads a TrueAchievements tab (or opens your profile in a background tab) and tries again once. Keep Firefox allowed to run in the background (on Xiaomi: autostart, battery _No restrictions_).
-
-**Python script** (`tools/ta_export.py`), on a computer with Google Chrome: `pip install playwright`, set `GAMER_ID` and `GAMERTAG` at its top, run `python ta_export.py --login` once to sign in, then
-`python ta_export.py --every 20 --post http://homeassistant.local:8123/api/webhook/<id>`.
-
-Home Assistant keeps the last CSV it received, so nothing breaks when the device is off: the statistics are simply not refreshed until it is back.
-
-Without any of this, the integration still tries to download the CSV (at most once an hour) with the cookie of **GamerToken**, which then has to be refreshed by hand and stops working after a while.
+TrueAchievements is protected by Cloudflare, which only lets a real browser through after a while. A cookie pasted into Home Assistant stops working after roughly an hour, and nothing an integration can do (other cookies, FlareSolverr, a Chrome-like TLS client...) changes that. Home Assistant cannot pass the "Verify you are human" check either. This is why the [Firefox extension](#recommended-setup-firefox-extension) downloads the file in your own signed-in browser and sends it to Home Assistant.
 
 ### Why is my current game showing "Offline" or missing details?
 
@@ -162,14 +163,13 @@ This usually happens when the name provided by the **Xbox integration** doesn't 
 
 ## Privacy & Security
 
-**Warning:** Your `GamerToken` is a sensitive piece of information that allows access to your TrueAchievements session.
-
-- This integration **never** sends your token to any third-party server.
-- The token is only used to communicate directly with `www.trueachievements.com` to download your CSV file.
-- It is stored securely within the Home Assistant internal configuration.
+- This integration **never** sends your data to any third-party server. The CSV is processed locally on your Home Assistant.
+- The **upload address** (webhook) is a secret: it lets anyone who knows it replace your CSV. It is shown only in the integration options and is hidden in diagnostics exports. Do not share it.
+- The **Firefox extension** only contacts `www.trueachievements.com` and the upload address you entered. Its settings stay in your browser.
+- If you use the optional **GamerToken**, it is only sent to `www.trueachievements.com` and stored in the Home Assistant configuration.
 
 > [!WARNING]
-> The `GamerToken` field must contain your **entire** cookie string (all `name=value;` pairs), not just a single value. Never share this string publicly (forums, screenshots, chat logs, issue reports) — it grants full access to your TrueAchievements session until it expires or is revoked.
+> The `GamerToken` field must contain your **entire** cookie string (all `name=value;` pairs), not just a single value. Never share this string publicly (forums, screenshots, chat logs, issue reports): it grants full access to your TrueAchievements session until it expires or is revoked.
 
 ## Credits
 

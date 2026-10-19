@@ -1,8 +1,7 @@
 "use strict";
 
 const SITE = "https://www.trueachievements.com/";
-const ALARM = "ta-sync";
-const DEFAULTS = { webhook: "", gamerId: "", gamertag: "", interval: 20 };
+const DEFAULTS = { webhook: "", gamerId: "", gamertag: "" };
 
 async function getConfig() {
   const stored = await browser.storage.local.get(DEFAULTS);
@@ -140,24 +139,9 @@ async function runSync() {
   }
 }
 
-async function schedule() {
-  const { interval } = await getConfig();
-  await browser.alarms.clear(ALARM);
-  browser.alarms.create(ALARM, {
-    periodInMinutes: Math.max(5, Number(interval) || 20),
-  });
-}
-
-browser.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM) runSync();
-});
-browser.runtime.onInstalled.addListener(schedule);
+// Synchronise once when Firefox starts; "Sync now" in the settings retries by hand.
 browser.runtime.onStartup.addListener(() => {
-  schedule();
   runSync();
-});
-browser.storage.onChanged.addListener((changes) => {
-  if (changes.interval) schedule();
 });
 browser.browserAction.onClicked.addListener(() =>
   browser.runtime.openOptionsPage()
