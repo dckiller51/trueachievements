@@ -53,6 +53,7 @@ The integration utilizes the TrueAchievements CSV export feature to fetch your d
    - **Gamertag:** Your Xbox name.
    - **GamerID:** Your unique numeric ID from TrueAchievements.
    - **GamerToken:** Your full session cookie value (see below).
+   - **User-Agent:** (Optional) The User-Agent of the browser you copied the cookie from.
    - **Now Playing Entity:** Select your Xbox `sensor.xbox_now_playing`.
    - **Excluded Apps:** (Optional) List apps like "YouTube" or "Netflix" to ignore them in stats.
 
@@ -124,6 +125,23 @@ To ensure a successful connection, you should copy the full cookie string from y
 7. Find the line labeled **cookie:**.
 8. Copy the **entire value** (a long string usually starting with `ASP.NET_SessionId=...`).
 9. Paste this full string into the **GamerToken** field in Home Assistant.
+
+### Why does the download stop working after a while?
+
+TrueAchievements is protected by Cloudflare, which only lets a real browser through after a while. A cookie pasted into Home Assistant therefore stops working after roughly an hour, and nothing an integration can do (other cookies, FlareSolverr, a Chrome-like TLS client...) changes that.
+
+The reliable solution is to let a **real browser where you are signed in** download the CSV and send it to Home Assistant, and to switch the integration to **Local file only**. A real, signed-in browser that visits your profile page regularly keeps its session, and Cloudflare lets it through. Home Assistant itself cannot do this: Cloudflare shows a "Verify you are human" check that only a human can pass.
+
+First, in the integration options, enable **Local file only**. The options form then shows the **upload address** (`/api/webhook/...`) of your integration (it is also written in the Home Assistant log). Keep it secret: anyone on your network who knows it can replace your CSV. Then pick one of the two tools:
+
+**Firefox extension** (recommended), on a phone or a computer that stays on. It runs in the browser where you are signed in to trueachievements.com and sends the CSV to Home Assistant on its own. Install it from Mozilla Add-ons: <https://addons.mozilla.org/addon/3100079/> (works on Firefox for desktop and Firefox for Android; the source is in `tools/firefox-extension`). Open its settings and fill the upload address (prefer the IP address of Home Assistant to a `.local` name on Android), your gamertag and your GamerID, then press _Sync now_. It synchronises when Firefox starts, then every hour while Firefox is open. If the server answers with an empty file, it reloads a TrueAchievements tab (or opens your profile in a background tab) and tries again once. Keep Firefox allowed to run in the background (on Xiaomi: autostart, battery _No restrictions_).
+
+**Python script** (`tools/ta_export.py`), on a computer with Google Chrome: `pip install playwright`, set `GAMER_ID` and `GAMERTAG` at its top, run `python ta_export.py --login` once to sign in, then
+`python ta_export.py --every 20 --post http://homeassistant.local:8123/api/webhook/<id>`.
+
+Home Assistant keeps the last CSV it received, so nothing breaks when the device is off: the statistics are simply not refreshed until it is back.
+
+Without any of this, the integration still tries to download the CSV (at most once an hour) with the cookie of **GamerToken**, which then has to be refreshed by hand and stops working after a while.
 
 ### Why is my current game showing "Offline" or missing details?
 

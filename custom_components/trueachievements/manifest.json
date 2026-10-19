@@ -1,9 +1,14 @@
 {
   "domain": "trueachievements",
   "name": "TrueAchievements",
-  "codeowners": ["@dckiller51"],
+  "codeowners": [
+    "@dckiller51"
+  ],
   "config_flow": true,
-  "dependencies": ["persistent_notification"],
+  "dependencies": [
+    "persistent_notification",
+    "webhook"
+  ],
   "documentation": "https://github.com/dckiller51/trueachievements",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/dckiller51/trueachievements/issues",

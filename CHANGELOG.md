@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ## 2026.10.0
 
+- **Changed** Download Frequency: The CSV export is now downloaded at most once an hour instead of once every 24 hours.
+- **Added** Firefox Extension: "TrueAchievements Sync" (Mozilla Add-ons) downloads the CSV in your signed-in browser and sends it to the upload webhook, on Firefox for desktop and Android.
+- **Added** Local File Only Mode: A new **Local file only** option stops every download from Home Assistant: the integration only reads the CSV file. The GamerToken cookie becomes optional.
+- **Added** Upload Webhook: The integration now receives the CSV on a private local webhook (address shown in the options), so a script running on a computer with a real browser (`tools/ta_export.py`) can send it. Cloudflare only lets a real, signed-in browser through.
+- **Added** Cookie Renewal Storage: Cookies renewed by the server during a download are stored and reused. Only cookie names are logged.
+- **Added** Custom User-Agent: A new optional field lets you set the User-Agent of the browser the cookie was copied from. Leave it empty to keep the default.
+- **Improved** Authentication Notification: The "access error" notification now explains how to refresh the cookie. A failed download is logged with the response headers instead of a misleading "Cloudflare" message.
+- **Fixed** Options Form: The options form could not be saved when no Now Playing entity was configured. Emptying a text field (User-Agent, excluded apps) now really clears it instead of bringing the old value back.
+- **Added** Unit Tests: Full test suite (config flow, coordinator, sensors, button, diagnostics) following Home Assistant conventions, with over 95% coverage enforced in CI.
+- **Improved** Development Tooling: Project configuration moved to `pyproject.toml`, and Ruff replaces black, isort, flake8 and pyupgrade.
 - **Improved** Home Assistant 2026.9+ Compatibility: The config flow now uses [Probatio](https://pypi.org/project/probatio/), the validation engine that replaces voluptuous in Home Assistant Core 2026.9.
 
 ## 2026.9.0

@@ -6,5 +6,5 @@ cd "$(dirname "$0")/.."
 
 scripts/install/pip_packages "pip"
 scripts/install/pip_packages setuptools wheel
-scripts/install/pip_packages --requirement requirements.txt
+pip install -e ".[dev]"
 pre-commit install

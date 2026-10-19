@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import logging
 import re
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 from aiohttp import ClientTimeout
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -24,6 +26,7 @@ from .const import (
     ATTR_TOTAL_ACHIEVEMENTS,
     ATTR_TOTAL_GAMES,
     CONF_EXCLUDED_APPS,
+    CONF_FILE_ONLY,
     CONF_GAMER_ID,
     CONF_GAMERTAG,
     CONF_GAMERTOKEN,
@@ -32,11 +35,14 @@ from .const import (
     CONF_NOTIFY_AUTH_ERROR,
     CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
+    CONF_USER_AGENT,
     DEFAULT_GAMES_FILE,
     DEFAULT_MAPPING_FILE,
     DEFAULT_NOTIFY_AUTH_ERROR,
     DEFAULT_NOTIFY_MAPPING,
+    DEFAULT_USER_AGENT,
     DOMAIN,
+    DOWNLOAD_INTERVAL,
     ISSUE_URL_MAPPING,
     URL_EXPORT_COLLECTION,
 )
@@ -46,6 +52,49 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
+
+STORAGE_VERSION = 1
+
+
+def parse_cookie(cookie: str) -> dict[str, str]:
+    """Split a ``name=value; name=value`` cookie string, keeping the order."""
+    pairs: dict[str, str] = {}
+    for pair in cookie.split(";"):
+        name, sep, value = pair.strip().partition("=")
+        if name and sep:
+            pairs[name] = value
+    return pairs
+
+
+def merge_cookie(cookie: str, updates: dict[str, str]) -> str:
+    """Replace, in ``cookie``, the cookies renewed by the server.
+
+    Only cookies that are already present are replaced: the server also sends
+    anonymous session cookies that must not overwrite a valid login.
+    """
+    pairs = parse_cookie(cookie)
+    for name, value in updates.items():
+        if name in pairs and value:
+            pairs[name] = value
+    return "; ".join(f"{name}={value}" for name, value in pairs.items())
+
+
+def describe_response(headers: Any, cookie_names: list[str]) -> str:
+    """Summarise a response for the logs, without any cookie value."""
+    parts = []
+    for name in (
+        "server",
+        "content-type",
+        "content-length",
+        "cf-mitigated",
+        "location",
+    ):
+        value = headers.get(name)
+        if value:
+            parts.append(f"{name}={value}")
+    if cookie_names:
+        parts.append(f"set-cookie={','.join(cookie_names)}")
+    return ", ".join(parts) or "no useful header"
 
 
 class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -67,6 +116,13 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.gamer_id: str = ""
         self.gamer_tag: str = ""
         self.gamer_token: str = ""
+        self.file_only: bool = False
+        self.user_agent: str = DEFAULT_USER_AGENT
+        self._store: Store[dict[str, str]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
+        )
+        self._session_cookie: str = ""
+        self._session_loaded: bool = False
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
         self.notify_mapping: bool = DEFAULT_NOTIFY_MAPPING
@@ -97,6 +153,11 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.gamer_id = str(dat.get(CONF_GAMER_ID, ""))
         self.gamer_tag = str(dat.get(CONF_GAMERTAG, ""))
         self.gamer_token = str(opts.get(CONF_GAMERTOKEN, dat.get(CONF_GAMERTOKEN, "")))
+        self.file_only = bool(opts.get(CONF_FILE_ONLY, dat.get(CONF_FILE_ONLY, False)))
+        user_agent = " ".join(
+            str(opts.get(CONF_USER_AGENT, dat.get(CONF_USER_AGENT, ""))).split()
+        )
+        self.user_agent = user_agent or DEFAULT_USER_AGENT
 
         conf_path = str(dat.get(CONF_GAMES_FILE, DEFAULT_GAMES_FILE))
         self.games_file = Path(self.hass.config.path(conf_path))
@@ -126,7 +187,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_request_refresh()
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from TA with 24h safety lock or use local CSV."""
+        """Fetch data from TA with a one-hour safety lock or use local CSV."""
         self._update_local_config()
         self.game_mapping = await self.hass.async_add_executor_job(
             self._load_mapping_file
@@ -142,10 +203,10 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             mtime = self.games_file.stat().st_mtime
             last_modified = dt_util.as_local(dt_util.utc_from_timestamp(mtime))
             self.last_valid_update = last_modified.strftime("%Y-%m-%d %H:%M")
-            if (now - last_modified) < timedelta(hours=24):
+            if (now - last_modified) < DOWNLOAD_INTERVAL:
                 should_download = False
 
-        if should_download and not self.auth_failed:
+        if should_download and not self.auth_failed and not self.file_only:
             await self._download_csv(now)
 
         game_info = self.get_game_info_local()
@@ -159,15 +220,57 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data["last_update"] = self.last_valid_update
         return data
 
-    async def _download_csv(self, now: Any) -> None:
-        """Handle the CSV download logic using the full session cookie provided by the user."""
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Cookie": self.gamer_token,
+    def _token_fingerprint(self) -> str:
+        """Identify the cookie the user entered, without storing it."""
+        return hashlib.sha256(self.gamer_token.encode("utf-8")).hexdigest()
+
+    async def _load_session_cookie(self) -> None:
+        """Reuse the cookie renewed by the server, unless the user entered a new one."""
+        self._session_loaded = True
+        data = await self._store.async_load()
+        if data and data.get("base") == self._token_fingerprint():
+            self._session_cookie = data.get("cookie", "")
+        else:
+            self._session_cookie = ""
+
+    async def _remember_renewed_cookies(
+        self, updates: dict[str, str], source: str
+    ) -> None:
+        """Keep the cookies renewed by the server for the next downloads."""
+        current = self._session_cookie or self.gamer_token
+        merged = merge_cookie(current, updates)
+        renewed = sorted(
+            name
+            for name, value in updates.items()
+            if parse_cookie(current).get(name, value) != value
+        )
+        _LOGGER.info(
+            "Cookies sent by the server (%s): %s; renewed: %s",
+            source,
+            ", ".join(sorted(updates)) or "none",
+            ", ".join(renewed) or "none",
+        )
+        if renewed:
+            self._session_cookie = merged
+            await self._store.async_save(
+                {"base": self._token_fingerprint(), "cookie": merged}
+            )
+
+    def _request_headers(self) -> dict[str, str]:
+        """Return the headers of a browser-like request with the session cookie."""
+        return {
+            "User-Agent": self.user_agent,
+            "Cookie": self._session_cookie or self.gamer_token,
             "Referer": f"https://www.trueachievements.com/gamer/{self.gamer_tag}",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
         }
+
+    async def _download_csv(self, now: Any) -> None:
+        """Handle the CSV download logic using the full session cookie provided by the user."""
+        if not self._session_loaded:
+            await self._load_session_cookie()
+        headers = self._request_headers()
         try:
             url_csv = URL_EXPORT_COLLECTION.format(self.gamer_id)
             async with self.session.get(
@@ -181,17 +284,30 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         )
                         self.last_valid_update = now.strftime("%Y-%m-%d %H:%M")
                         self.auth_failed = False
+                        await self._remember_renewed_cookies(
+                            {
+                                name: morsel.value
+                                for name, morsel in resp.cookies.items()
+                            },
+                            "download",
+                        )
                     else:
                         _LOGGER.error(
-                            "Received file is empty or malformed (Blocked by Cloudflare/Verification)"
+                            "Received file is empty or malformed: %s bytes, no CSV (%s)",
+                            len(content),
+                            describe_response(resp.headers, list(resp.cookies)),
                         )
                         self.auth_failed = True
                         self._send_error_notification()
                 elif resp.status in (401, 403):
-                    _LOGGER.error("Access denied by server (Error %s)", resp.status)
+                    _LOGGER.error(
+                        "Access denied by server (Error %s) (%s)",
+                        resp.status,
+                        describe_response(resp.headers, list(resp.cookies)),
+                    )
                     self.auth_failed = True
                     self._send_error_notification()
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             _LOGGER.error("Network error during update: %s", err)
 
     def _get_mapping_file(self) -> Path:
@@ -211,7 +327,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if isinstance(data, dict):
                     return {k.lower().strip(): v for k, v in data.items()}
                 return {}
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             _LOGGER.error("Failed to load mapping file: %s", mapping_file)
             return {}
 
@@ -242,9 +358,21 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 common = data.get("common", {})
                 if isinstance(common, dict) and common:
                     return {str(k): str(v) for k, v in common.items()}
-            except Exception:  # pylint: disable=broad-exception-caught
+            except Exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                 _LOGGER.debug("Failed to load notify translations for lang=%s", lang)
         return {}
+
+    async def async_receive_csv(self, content: bytes) -> bool:
+        """Store a CSV export sent by an external tool (webhook)."""
+        if len(content) <= 1000 or b"Game name" not in content:
+            _LOGGER.warning("Rejected an uploaded file that is not a CSV export")
+            return False
+        await self.hass.async_add_executor_job(self._write_file, content)
+        self.last_valid_update = dt_util.now().strftime("%Y-%m-%d %H:%M")
+        self.auth_failed = False
+        _LOGGER.info("CSV export received (%s bytes)", len(content))
+        await self.async_request_refresh()
+        return True
 
     def _write_file(self, content: bytes) -> None:
         """Physically save the CSV file."""
@@ -264,7 +392,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         try:
             message = message_tpl.format(gamer_tag=self.gamer_tag)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             message = f"The cookie for **{self.gamer_tag}** has expired."
 
         self.hass.add_job(
@@ -395,7 +523,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 lookup_name, match_found, current_name, safe_info
             )
 
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             _LOGGER.error("Error reading CSV: %s", err)
 
         return {
@@ -441,7 +569,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         def _s_int(key: str) -> int:
             try:
                 return int(re.sub(r"[^\d]", "", row.get(key, "0") or "0"))
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return 0
 
         return {
@@ -525,7 +653,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 publisher=info.get("publisher"),
                 issue_url=ISSUE_URL_MAPPING,
             )
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             message = (
                 f"Game **{current_name}** ({info.get('platform')}) not matching. "
                 f"Publisher: {info.get('publisher')}. "
