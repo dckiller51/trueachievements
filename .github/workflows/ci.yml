@@ -48,9 +48,17 @@ jobs:
           cache: "pip"
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev]"
+      - name: Run Ruff check
+        run: ruff check custom_components/ tests/
+      - name: Run Ruff format check
+        run: ruff format --check custom_components/ tests/
       # Following steps cannot run by pre-commit.ci as repo = local
       - name: Run mypy
         run: mypy custom_components/
       - name: Pylint review
         run: pylint custom_components/
+
+      - name: Run tests with coverage
+        run: pytest

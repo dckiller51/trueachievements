@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TrueAchievements Sync</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 16px;
+        max-width: 560px;
+      }
+      label {
+        display: block;
+        margin-top: 14px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        font-size: 16px;
+      }
+      small {
+        color: #666;
+        display: block;
+        margin-top: 2px;
+      }
+      button {
+        margin-top: 18px;
+        padding: 10px 16px;
+        font-size: 16px;
+      }
+      #status {
+        margin-top: 18px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #eee;
+      }
+      #status.ok {
+        background: #d8f3dc;
+      }
+      #status.error {
+        background: #ffd6d6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TrueAchievements Sync</h1>
+    <label for="webhook">Home Assistant upload address</label>
+    <input
+      id="webhook"
+      type="url"
+      placeholder="http://192.168.1.10:8123/api/webhook/..."
+    />
+    <small
+      >Shown in the integration options. Prefer the IP address over a .local
+      name on Android.</small
+    >
+    <label for="gamertag">Gamertag</label>
+    <input id="gamertag" type="text" autocapitalize="off" />
+    <label for="gamerId">GamerID</label>
+    <input id="gamerId" type="text" inputmode="numeric" />
+    <label for="interval">Every (minutes)</label>
+    <input id="interval" type="number" min="5" value="20" />
+    <button id="save">Save</button>
+    <button id="run">Sync now</button>
+    <div id="status">No synchronisation yet.</div>
+    <script src="options.js"></script>
+  </body>
+</html>

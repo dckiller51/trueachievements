@@ -14,9 +14,11 @@ ENV/
 .storage/
 *.db
 *.log
+.coverage
 
-# Mypy cache
+# Mypy / Ruff cache
 .mypy_cache/
+.ruff_cache/
 
 # Editors and OS files
 .idea/

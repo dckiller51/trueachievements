@@ -5,8 +5,10 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_GAMERTOKEN, DOMAIN
+from .const import CONF_GAMERTOKEN, CONF_WEBHOOK_ID, DOMAIN
 from .coordinator import TrueAchievementsCoordinator
+
+TO_REDACT = {CONF_GAMERTOKEN, CONF_WEBHOOK_ID}
 
 
 async def async_get_config_entry_diagnostics(
@@ -17,11 +19,10 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry": {
             "data": {
-                k: ("***" if k == CONF_GAMERTOKEN else v) for k, v in entry.data.items()
+                k: ("***" if k in TO_REDACT else v) for k, v in entry.data.items()
             },
             "options": {
-                k: ("***" if k == CONF_GAMERTOKEN else v)
-                for k, v in entry.options.items()
+                k: ("***" if k in TO_REDACT else v) for k, v in entry.options.items()
             },
         },
         "coordinator": {
