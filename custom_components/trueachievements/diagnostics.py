@@ -5,10 +5,10 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_GAMERTOKEN, DOMAIN
+from .const import CONF_GAMERTOKEN, CONF_WEBHOOK_ID, DOMAIN
 from .coordinator import TrueAchievementsCoordinator
 
-TO_REDACT = {CONF_GAMERTOKEN}
+TO_REDACT = {CONF_GAMERTOKEN, CONF_WEBHOOK_ID}
 
 
 async def async_get_config_entry_diagnostics(

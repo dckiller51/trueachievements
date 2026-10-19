@@ -58,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         local_only=True,
     )
     entry.async_on_unload(lambda: webhook.async_unregister(hass, webhook_id))
-    _LOGGER.info("CSV upload address: %s", webhook.async_generate_path(webhook_id))
+    _LOGGER.info("CSV upload address registered (shown in the integration options)")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
