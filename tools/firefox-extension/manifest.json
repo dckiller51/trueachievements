@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "TrueAchievements Sync",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Downloads your TrueAchievements game collection CSV with your signed-in browser and sends it to Home Assistant.",
   "browser_specific_settings": {
     "gecko": {
@@ -18,7 +18,6 @@
     }
   },
   "permissions": [
-    "alarms",
     "storage",
     "tabs",
     "https://www.trueachievements.com/*",
