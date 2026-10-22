@@ -12,8 +12,9 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -164,12 +165,33 @@ class TANowPlayingSensor(
             "name": f"TrueAchievements ({coordinator.gamer_tag})",
         }
 
+    async def async_added_to_hass(self) -> None:
+        """Follow the Xbox image entity, whose access token changes regularly."""
+        await super().async_added_to_hass()
+        image_entity = self.coordinator.now_playing_image_entity_id()
+        if image_entity:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, [image_entity], self._handle_image_change
+                )
+            )
+
+    @callback
+    def _handle_image_change(self, _event: Event[EventStateChangedData]) -> None:
+        """Refresh the picture when the Xbox image entity gets a new token."""
+        self.async_write_ha_state()
+
     @property
     def entity_picture(self) -> str | None:
-        """Use the image stored in coordinator data."""
+        """Return the game image, with the current token of the Xbox image entity."""
         details = self.coordinator.data.get("current_game_details", {})
         image = details.get("entity_picture")
-        return str(image) if image else None
+        if not image:
+            return None
+        image_entity = self.coordinator.now_playing_image_entity_id()
+        state = self.hass.states.get(image_entity) if image_entity else None
+        live = state.attributes.get("entity_picture") if state else None
+        return str(live or image)
 
     @property
     def icon(self) -> str | None:

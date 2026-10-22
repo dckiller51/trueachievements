@@ -4,7 +4,7 @@ from datetime import timedelta
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.10.0"
+VERSION = "2026.10.1"
 
 # Minimum delay between two downloads of the TrueAchievements CSV export.
 DOWNLOAD_INTERVAL = timedelta(hours=1)

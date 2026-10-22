@@ -406,6 +406,15 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             },
         )
 
+    def now_playing_image_entity_id(self) -> str | None:
+        """Return the image entity that goes with the Xbox Now Playing sensor."""
+        eid_sensor = self.entry.options.get(
+            CONF_NOW_PLAYING_ENTITY, self.entry.data.get(CONF_NOW_PLAYING_ENTITY)
+        )
+        if not eid_sensor:
+            return None
+        return str(eid_sensor).replace("sensor.", "image.")
+
     def get_game_info_local(self) -> dict[str, Any] | None:
         """Get info from Xbox sensor with dual-case publisher support."""
         eid_sensor = self.entry.options.get(

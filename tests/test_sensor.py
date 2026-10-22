@@ -25,6 +25,7 @@ from .const import (
     TOTAL_STARTED,
     TOTAL_TA_SCORE,
     XBOX_ENTITY,
+    XBOX_IMAGE_ENTITY,
 )
 
 
@@ -127,6 +128,32 @@ async def test_now_playing_sensor_matches_the_current_game(
     assert state.attributes["game_url"] == HALO_URL
     assert state.attributes["walkthrough_url"] == HALO_WALKTHROUGH
     assert state.attributes["last_update"]
+
+
+async def test_now_playing_picture_follows_the_image_token(
+    hass: HomeAssistant,
+    mock_config_entry_xbox: MockConfigEntry,
+    mock_csv_download: AiohttpClientMocker,
+    setup_integration: SetupIntegration,
+) -> None:
+    """A new token on the Xbox image entity is reflected on the sensor."""
+    set_now_playing(
+        hass, "Halo Infinite", platform="Xbox Series X|S", picture="/api/x?token=old"
+    )
+    await setup_integration(mock_config_entry_xbox)
+    entity_id = get_entity_id(hass, "sensor", "now_playing")
+    assert hass.states.get(entity_id).attributes["entity_picture"] == (
+        "/api/x?token=old"
+    )
+
+    hass.states.async_set(
+        XBOX_IMAGE_ENTITY, "2026-01-01T00:05:00", {"entity_picture": "/api/x?token=new"}
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).attributes["entity_picture"] == (
+        "/api/x?token=new"
+    )
 
 
 async def test_now_playing_sensor_without_picture_uses_icon(

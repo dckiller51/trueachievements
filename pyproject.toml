@@ -4,15 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trueachievements"
-version = "2026.10.0"
+version = "2026.10.1"
 description = "Home Assistant custom integration for TrueAchievements: gamerscore, TA score, completion and current game stats."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.14"
-dependencies = [
-    "homeassistant>=2026.9.0",
-]
+dependencies = ["homeassistant>=2026.9.0"]
 
 [project.optional-dependencies]
 dev = [
@@ -41,25 +39,25 @@ line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "F",    # pyflakes
-    "I",    # isort
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "W",    # pycodestyle warnings
-    "D",    # pydocstyle (flake8-docstrings)
-    "SIM",  # flake8-simplify
-    "C4",   # flake8-comprehensions
-    "PGH",  # pygrep-hooks
-    "RUF",  # ruff-specific rules
-    "BLE",  # flake8-blind-except
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "W",   # pycodestyle warnings
+    "D",   # pydocstyle (flake8-docstrings)
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+    "PGH", # pygrep-hooks
+    "RUF", # ruff-specific rules
+    "BLE", # flake8-blind-except
 ]
 ignore = [
-    "E501",    # line too long (handled by the formatter, long URLs)
-    "D202",    # no blank lines allowed after function docstring
-    "D107",    # missing docstring in __init__
-    "RUF002",  # ambiguous unicode character in docstring
-    "UP024",   # replace aliased errors with OSError
+    "E501",   # line too long (handled by the formatter, long URLs)
+    "D202",   # no blank lines allowed after function docstring
+    "D107",   # missing docstring in __init__
+    "RUF002", # ambiguous unicode character in docstring
+    "UP024",  # replace aliased errors with OSError
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -113,26 +111,23 @@ good-names = ["i", "j", "k", "ex", "_", "T", "x", "y", "id"]
 # These flags are disabled to align with Home Assistant development standards
 # and to avoid false positives caused by Python dataclasses or long URLs.
 disable = [
-    "format",                          # Handled by Ruff
-    "abstract-method",                 # Async methods often trigger this incorrectly
-    "cyclic-import",                   # Does not account for conditional imports
-    "duplicate-code",                  # Often unavoidable in platform definitions
-    "inconsistent-return-statements",  # Does not handle 'raise' correctly
-    "too-many-instance-attributes",    # R0902: integration entities often exceed 7 attributes
-    "wrong-import-order",              # Handled by Ruff
-    "too-few-public-methods",          # Standard for many simple HA entities
-    "unexpected-keyword-arg",          # E1123: false positives on SensorEntityDescription
-    "no-value-for-parameter",          # False positives with HA dataclasses
-    "too-many-locals",                 # Allows complex CSV parsing in the coordinator (R0914)
-    "wildcard-import",                 # Suppresses W0401 alerts
-    "unused-wildcard-import",          # Suppresses W0614 alerts
-    "line-too-long",                   # Ignore long TrueAchievements URLs (C0301)
-    "missing-final-newline",           # Prevents C0304 if a file lacks a trailing newline
+    "format",                         # Handled by Ruff
+    "abstract-method",                # Async methods often trigger this incorrectly
+    "cyclic-import",                  # Does not account for conditional imports
+    "duplicate-code",                 # Often unavoidable in platform definitions
+    "inconsistent-return-statements", # Does not handle 'raise' correctly
+    "too-many-instance-attributes",   # R0902: integration entities often exceed 7 attributes
+    "wrong-import-order",             # Handled by Ruff
+    "too-few-public-methods",         # Standard for many simple HA entities
+    "unexpected-keyword-arg",         # E1123: false positives on SensorEntityDescription
+    "no-value-for-parameter",         # False positives with HA dataclasses
+    "too-many-locals",                # Allows complex CSV parsing in the coordinator (R0914)
+    "wildcard-import",                # Suppresses W0401 alerts
+    "unused-wildcard-import",         # Suppresses W0614 alerts
+    "line-too-long",                  # Ignore long TrueAchievements URLs (C0301)
+    "missing-final-newline",          # Prevents C0304 if a file lacks a trailing newline
 ]
-enable = [
-    "useless-suppression",
-    "use-symbolic-message-instead",
-]
+enable = ["useless-suppression", "use-symbolic-message-instead"]
 
 [tool.pylint.reports]
 score = true

@@ -1,6 +1,7 @@
 # TrueAchievements for Home Assistant
 
-> [!IMPORTANT] > **This integration requires a TrueAchievements PRO account.** > Data is retrieved via the "CSV Export" feature, which is a premium feature exclusive to Pro members on the TrueAchievements website.
+> [!IMPORTANT] > **This integration requires a TrueAchievements PRO account.**
+> Data is retrieved via the "CSV Export" feature, which is a premium feature exclusive to Pro members on the TrueAchievements website.
 
 [![GH-release](https://img.shields.io/github/v/release/dckiller51/trueachievements.svg?style=flat-square)](https://github.com/dckiller51/trueachievements/releases)
 [![GH-downloads](https://img.shields.io/github/downloads/dckiller51/trueachievements/total?style=flat-square)](https://github.com/dckiller51/trueachievements/releases)
@@ -91,7 +92,7 @@ The extension synchronises when Firefox starts and nothing runs in the backgroun
 
 ### 🎮 Now Playing Attributes
 
-When a game is detected via your linked Xbox entity, the **Now Playing** sensor (`sensor.trueachievements_now_playing`) provides these detailed attributes for use in your dashboards:
+When a game is detected via your linked Xbox entity, the **Now Playing** sensor (`sensor.trueachievements_<gamertag>_now_playing`) provides these detailed attributes for use in your dashboards:
 
 | Attribute         | Example / Description                                            |
 | :---------------- | :--------------------------------------------------------------- |
@@ -202,6 +203,9 @@ cards:
 > [!NOTE]
 > When no game is playing, the **Now Playing** sensor state is `offline_status` (shown as "Offline" in the Home Assistant interface), which is why the card tests for it.
 
+> [!TIP]
+> The picture comes from the image entity of the official Xbox integration, so the Xbox integration must be configured for the cover to appear.
+
 ## FAQ
 
 ### ⚠️ Why do I need a TrueAchievements Pro account?
@@ -234,7 +238,7 @@ TrueAchievements is protected by Cloudflare, which only lets a real browser thro
 This usually happens when the name provided by the **Xbox integration** doesn't perfectly match the name in the **TrueAchievements database** (e.g., `Roblox - Xbox` vs `ROBLOX`).
 
 1. **Check your notification:** Home Assistant will alert you if a mismatch is detected, with the exact mapping entry to add.
-2. **Fix it yourself:** Copy the bundled `mapping.json` to `/config/trueachievements/mapping.json` (see [Custom Game Mapping](#custom-game-mapping)) and add the entry shown in the notification.
+2. **Fix it yourself:** Copy the bundled `mapping.json` to `/config/trueachievements/mapping.json` and add the entry shown in the notification.
 3. **Reload:** Press the **"Reload game mapping"** button on the device page — the notification disappears automatically once the game matches.
 
 > [!NOTE]
