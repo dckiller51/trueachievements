@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.10.1
+
+- **Fixed** Now Playing Picture: The game image of the **Now Playing** sensor no longer breaks after a few minutes. The sensor now follows the access token of the Xbox image entity instead of keeping an expired address.
+- **Added** Dashboard Example: A Mushroom card (game cover, global stats, last sync) is documented in the README.
+
 ## 2026.10.0
 
 - **Changed** Download Frequency: The CSV export is now downloaded at most once an hour instead of once every 24 hours.
