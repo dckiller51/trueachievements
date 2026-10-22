@@ -117,6 +117,91 @@ When a game is detected via your linked Xbox entity, the **Now Playing** sensor 
 | :-----------------------------------------------: | :------------------------------------------------: |
 | ![Global Stats](./screenshots/dashboard_full.png) | ![Now Playing](./screenshots/now_playing_card.png) |
 
+## Dashboard example (Mushroom)
+
+A single stack showing the game being played (with its cover), your global stats and the last synchronisation. It uses the [Mushroom](https://github.com/piitaya/lovelace-mushroom) cards (installable from HACS).
+
+|                    Playing                     |                    Xbox off                     |
+| :--------------------------------------------: | :---------------------------------------------: |
+| ![Playing](./screenshots/mushroom_playing.png) | ![Xbox off](./screenshots/mushroom_offline.png) |
+
+<details>
+<summary>Card YAML</summary>
+
+Replace `yourgamertag` with your gamertag in lowercase. The entity IDs are built from the name of the device and of the sensors, so check them in **Settings** -> **Devices & Services** -> **TrueAchievements** if your Home Assistant is not set to English.
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:mushroom-template-card
+    entity: sensor.trueachievements_yourgamertag_now_playing
+    picture: "{{ state_attr(entity, 'entity_picture') or '' }}"
+    icon: mdi:microsoft-xbox-controller
+    icon_color: >-
+      {% if states(entity) in ['unknown', 'unavailable', 'offline_status'] %}grey{% else %}green{% endif %}
+    primary: >-
+      {% if states(entity) in ['unknown', 'unavailable', 'offline_status'] %}Xbox off{% else %}{{ state_attr(entity, 'name') or states(entity) }}{% endif %}
+    secondary: >-
+      {% if states(entity) in ['unknown', 'unavailable', 'offline_status'] %}No game playing{% else %}{{ state_attr(entity, 'platform') }} · {{ state_attr(entity, 'publisher') }} 🏆 {{ state_attr(entity, 'achievements') }} · {{ state_attr(entity, 'game_completion') }} 🎯 {{ state_attr(entity, 'gamerscore') }} ⭐ {{ state_attr(entity, 'ta_score') }} · ratio {{ state_attr(entity, 'game_ratio') }} ⏱️ {{ state_attr(entity, 'hours_played') }}{% endif %}
+    multiline_secondary: true
+    fill_container: true
+    tap_action:
+      action: more-info
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-template-card
+        primary: "{{ '{:,}'.format(states('sensor.trueachievements_yourgamertag_gamerscore') | int(0)) }} G"
+        secondary: Gamerscore
+        icon: mdi:alpha-g-circle
+        icon_color: green
+        layout: vertical
+        tap_action:
+          action: more-info
+          entity: sensor.trueachievements_yourgamertag_gamerscore
+      - type: custom:mushroom-template-card
+        primary: "{{ '{:,}'.format(states('sensor.trueachievements_yourgamertag_ta_score') | int(0)) }}"
+        secondary: TA Score
+        icon: mdi:star-circle
+        icon_color: amber
+        layout: vertical
+        tap_action:
+          action: more-info
+          entity: sensor.trueachievements_yourgamertag_ta_score
+      - type: custom:mushroom-template-card
+        primary: "{{ states('sensor.trueachievements_yourgamertag_completion_percentage') }} %"
+        secondary: Completion
+        icon: mdi:percent
+        icon_color: blue
+        layout: vertical
+        tap_action:
+          action: more-info
+          entity: sensor.trueachievements_yourgamertag_completion_percentage
+      - type: custom:mushroom-template-card
+        primary: "{{ states('sensor.trueachievements_yourgamertag_completed_games') }}"
+        secondary: Completed games
+        icon: mdi:trophy
+        icon_color: orange
+        layout: vertical
+        tap_action:
+          action: more-info
+          entity: sensor.trueachievements_yourgamertag_completed_games
+  - type: custom:mushroom-template-card
+    entity: binary_sensor.trueachievements_yourgamertag_ta_auth_status
+    primary: Last sync
+    secondary: "{{ state_attr(entity, 'last_update') }}"
+    icon: >-
+      {% if is_state(entity, 'on') %}mdi:alert-circle{% else %}mdi:check-circle{% endif %}
+    icon_color: >-
+      {% if is_state(entity, 'on') %}red{% else %}green{% endif %}
+    tap_action:
+      action: more-info
+```
+
+</details>
+
+> [!NOTE]
+> When no game is playing, the **Now Playing** sensor state is `offline_status` (shown as "Offline" in the Home Assistant interface), which is why the card tests for it.
+
 ## FAQ
 
 ### ⚠️ Why do I need a TrueAchievements Pro account?
