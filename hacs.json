@@ -1,5 +1,7 @@
 {
+  "filename": "trueachievements.zip",
   "homeassistant": "2026.9.3",
   "name": "TrueAchievements",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true
 }
