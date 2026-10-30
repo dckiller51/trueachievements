@@ -2,6 +2,8 @@
   "common": {
     "auth_error_message": "The cookie for **{gamer_tag}** has expired. Copy a fresh cookie from your browser (with its User-Agent) and paste it in the integration options.",
     "auth_error_title": "TrueAchievements: Access Error",
+    "completion_lost_message": "**{game}** ({platform}) is no longer completed at 100%: {achievements} achievements ({missing} missing). [Open on TrueAchievements]({url})",
+    "completion_lost_title": "TrueAchievements: New achievements",
     "mapping_message": "Game **{game}** ({platform}) not matching. Publisher: {publisher}. Add `\"{game}\": \"TrueAchievements name\"` to `trueachievements/mapping.json` and press the **Reload game mapping** button.",
     "mapping_title": "TrueAchievements: Action Required"
   },
@@ -24,6 +26,7 @@
           "gamertoken": "Session Token (Cookie)",
           "games_file": "CSV File Path",
           "notify_auth_error": "Notify on authentication error",
+          "notify_completion_lost": "Notify when a game is no longer completed at 100%",
           "notify_mapping": "Notify on unmatched games (mapping)",
           "now_playing_entity": "Xbox Tracked Entity (Now Playing)",
           "user_agent": "Browser User-Agent"
@@ -64,6 +67,18 @@
       },
       "gamerscore": {
         "name": "Gamerscore"
+      },
+      "lost_completions": {
+        "name": "Lost completions",
+        "state_attributes": {
+          "game_names": {
+            "name": "Game names"
+          },
+          "games": {
+            "name": "Games"
+          }
+        },
+        "unit_of_measurement": "games"
       },
       "now_playing": {
         "name": "Now Playing",
@@ -129,6 +144,7 @@
           "file_only": "Local file only",
           "gamertoken": "Session Token (Cookie)",
           "notify_auth_error": "Notify on authentication error",
+          "notify_completion_lost": "Notify when a game is no longer completed at 100%",
           "notify_mapping": "Notify on unmatched games (mapping)",
           "now_playing_entity": "Xbox Tracked Entity",
           "user_agent": "Browser User-Agent"

@@ -23,12 +23,14 @@ from .const import (
     CONF_GAMERTOKEN,
     CONF_GAMES_FILE,
     CONF_NOTIFY_AUTH_ERROR,
+    CONF_NOTIFY_COMPLETION_LOST,
     CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     CONF_USER_AGENT,
     CONF_WEBHOOK_ID,
     DEFAULT_GAMES_FILE,
     DEFAULT_NOTIFY_AUTH_ERROR,
+    DEFAULT_NOTIFY_COMPLETION_LOST,
     DEFAULT_NOTIFY_MAPPING,
     DOMAIN,
 )
@@ -79,6 +81,10 @@ class TrueAchievementsConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): bool,
                     probatio.Optional(
                         CONF_NOTIFY_AUTH_ERROR, default=DEFAULT_NOTIFY_AUTH_ERROR
+                    ): bool,
+                    probatio.Optional(
+                        CONF_NOTIFY_COMPLETION_LOST,
+                        default=DEFAULT_NOTIFY_COMPLETION_LOST,
                     ): bool,
                 }
             ),
@@ -133,6 +139,12 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
                 CONF_NOTIFY_AUTH_ERROR, DEFAULT_NOTIFY_AUTH_ERROR
             ),
         )
+        notify_completion_lost = self.config_entry.options.get(
+            CONF_NOTIFY_COMPLETION_LOST,
+            self.config_entry.data.get(
+                CONF_NOTIFY_COMPLETION_LOST, DEFAULT_NOTIFY_COMPLETION_LOST
+            ),
+        )
 
         # An entity selector cannot validate a default of None: only pre-fill the
         # field when an Xbox entity was actually selected.
@@ -172,6 +184,9 @@ class TrueAchievementsOptionsFlowHandler(OptionsFlow):
                     ): bool,
                     probatio.Optional(
                         CONF_NOTIFY_AUTH_ERROR, default=notify_auth_error
+                    ): bool,
+                    probatio.Optional(
+                        CONF_NOTIFY_COMPLETION_LOST, default=notify_completion_lost
                     ): bool,
                 }
             ),

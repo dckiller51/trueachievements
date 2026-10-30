@@ -21,6 +21,7 @@ from .const import (
     ATTR_COMPLETED_GAMES,
     ATTR_COMPLETION_PCT,
     ATTR_GAMERSCORE,
+    ATTR_LOST_COMPLETIONS,
     ATTR_TA_SCORE,
     ATTR_TOTAL_ACHIEVEMENTS,
     ATTR_TOTAL_GAMES,
@@ -41,6 +42,7 @@ class TrueAchievementsSensorDescription(SensorEntityDescription):
     """Description for TrueAchievements sensors."""
 
     value_fn: Callable[[dict[str, Any]], Any]
+    attrs_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
 
 # Numeric sensors definition
@@ -89,6 +91,22 @@ SENSOR_TYPES: tuple[TrueAchievementsSensorDescription, ...] = (
         native_unit_of_measurement="%",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.get(ATTR_COMPLETION_PCT),
+    ),
+    TrueAchievementsSensorDescription(
+        key=ATTR_LOST_COMPLETIONS,
+        translation_key=ATTR_LOST_COMPLETIONS,
+        icon="mdi:trophy-broken",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: len(data.get(ATTR_LOST_COMPLETIONS) or []),
+        attrs_fn=lambda data: {
+            "games": [
+                {k: v for k, v in game.items() if k != "key"}
+                for game in data.get(ATTR_LOST_COMPLETIONS) or []
+            ],
+            "game_names": [
+                game["name"] for game in data.get(ATTR_LOST_COMPLETIONS) or []
+            ],
+        },
     ),
 )
 
@@ -146,6 +164,13 @@ class TrueAchievementsSensor(
     def native_value(self) -> Any:
         """Return the state of the sensor."""
         return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the extra attributes, for the sensors that have some."""
+        if self.entity_description.attrs_fn is None:
+            return None
+        return self.entity_description.attrs_fn(self.coordinator.data)
 
 
 class TANowPlayingSensor(

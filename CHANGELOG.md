@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 <!--next-version-placeholder-->
 
+## 2026.10.2
+
+- **Added** Lost Completions Sensor: Lists the games that were completed at 100% and no longer are because new achievements were added (usually a DLC), with their progress and TrueAchievements link. A notification (which can be turned off in the options) is shown for each game, and dismissed once it is completed again. A `trueachievements_completion_lost` event is also fired for each newly lost game.
+
 ## 2026.10.1
 
 - **Fixed** Now Playing Picture: The game image of the **Now Playing** sensor no longer breaks after a few minutes. The sensor now follows the access token of the Xbox image entity instead of keeping an expired address.

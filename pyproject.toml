@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trueachievements"
-version = "2026.10.1"
+version = "2026.10.2"
 description = "Home Assistant custom integration for TrueAchievements: gamerscore, TA score, completion and current game stats."
 readme = "README.md"
 license = "Apache-2.0"
