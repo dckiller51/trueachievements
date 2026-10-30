@@ -19,6 +19,7 @@ from custom_components.trueachievements.const import (
     CONF_GAMERTOKEN,
     CONF_GAMES_FILE,
     CONF_NOTIFY_AUTH_ERROR,
+    CONF_NOTIFY_COMPLETION_LOST,
     CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     CONF_USER_AGENT,
@@ -66,6 +67,7 @@ async def test_user_form_is_shown(hass: HomeAssistant) -> None:
         CONF_GAMES_FILE,
         CONF_NOTIFY_MAPPING,
         CONF_NOTIFY_AUTH_ERROR,
+        CONF_NOTIFY_COMPLETION_LOST,
     } == fields
 
 
@@ -92,6 +94,7 @@ async def test_user_flow_creates_entry_with_defaults(
         CONF_GAMES_FILE: DEFAULT_GAMES_FILE,
         CONF_NOTIFY_MAPPING: True,
         CONF_NOTIFY_AUTH_ERROR: True,
+        CONF_NOTIFY_COMPLETION_LOST: True,
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -109,6 +112,7 @@ async def test_user_flow_creates_entry_with_all_fields(
         CONF_GAMES_FILE: "custom/games.csv",
         CONF_NOTIFY_MAPPING: False,
         CONF_NOTIFY_AUTH_ERROR: False,
+        CONF_NOTIFY_COMPLETION_LOST: False,
     }
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
@@ -155,6 +159,7 @@ async def test_options_flow_shows_form(
         CONF_EXCLUDED_APPS,
         CONF_NOTIFY_MAPPING,
         CONF_NOTIFY_AUTH_ERROR,
+        CONF_NOTIFY_COMPLETION_LOST,
     } == fields
 
 
@@ -192,6 +197,7 @@ async def test_options_flow_keeps_current_values(
             CONF_USER_AGENT: "UA-from-options",
             CONF_NOTIFY_MAPPING: False,
             CONF_NOTIFY_AUTH_ERROR: False,
+            CONF_NOTIFY_COMPLETION_LOST: False,
         },
     )
     entry.add_to_hass(hass)
@@ -217,6 +223,7 @@ async def test_options_flow_keeps_current_values(
         CONF_EXCLUDED_APPS: "Netflix",
         CONF_NOTIFY_MAPPING: False,
         CONF_NOTIFY_AUTH_ERROR: False,
+        CONF_NOTIFY_COMPLETION_LOST: False,
     }
 
 

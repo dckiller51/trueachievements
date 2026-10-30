@@ -85,10 +85,40 @@ The extension synchronises when Firefox starts and nothing runs in the backgroun
 | **Total Games**        | Total number of games started.          | Excludes apps (if configured).          |
 | **Completed Games**    | Games finished with 100% achievements.  | Games with all achievements unlocked.   |
 | **Total Achievements** | Total individual achievements unlocked. | All games combined.                     |
+| **Lost Completions**   | Games that were 100% but no longer are. | `games`, `game_names` (see below).      |
 | **Now Playing**        | Current game name and details.          | **See detailed attributes below.**      |
 | **Auth Status**        | Binary sensor for session validity.     | `ON` if token needs update.             |
 
 ---
+
+### 🏆 Lost Completions
+
+When new achievements are added to a game you had completed (usually with a DLC), your **Completed Games** count drops. The **Lost Completions** sensor (`sensor.trueachievements_<gamertag>_lost_completions`) tells you which games are concerned:
+
+- **State:** the number of games that were completed at 100% and no longer are.
+- **`games`:** one entry per game with `name`, `platform`, `achievements` (e.g. `120 / 135`), `missing_achievements`, `gamerscore` and `game_url`.
+- **`game_names`:** just the names, handy for a notification.
+
+A game leaves the list as soon as it is completed again. The integration remembers every game it has seen at 100%, starting from its first update: a completion lost before this version was installed cannot be detected.
+
+**Notification:** like for unmatched games, Home Assistant shows a notification for each game that is no longer at 100%, with its progress and a link to the game on TrueAchievements. It disappears automatically once the game is completed again. You can turn it off with the **Notify when a game is no longer completed at 100%** option.
+
+To be notified somewhere else (on your phone, for example), use the `trueachievements_completion_lost` event, fired once for each newly lost game with `gamertag`, `name`, `platform`, `achievements`, `missing_achievements`, `gamerscore` and `game_url`:
+
+```yaml
+automation:
+  - alias: "TrueAchievements: game no longer completed"
+    triggers:
+      - trigger: event
+        event_type: trueachievements_completion_lost
+    actions:
+      - action: notify.notify
+        data:
+          title: "🏆 New achievements"
+          message: >-
+            {{ trigger.event.data.name }} ({{ trigger.event.data.platform }})
+            is no longer at 100%: {{ trigger.event.data.achievements }}.
+```
 
 ### 🎮 Now Playing Attributes
 

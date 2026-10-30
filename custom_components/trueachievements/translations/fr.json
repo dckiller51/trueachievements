@@ -2,6 +2,8 @@
   "common": {
     "auth_error_message": "Le cookie pour **{gamer_tag}** a expiré. Copiez un cookie récent depuis votre navigateur (avec son User-Agent) et collez-le dans les options de l'intégration.",
     "auth_error_title": "TrueAchievements : erreur d'accès",
+    "completion_lost_message": "**{game}** ({platform}) n'est plus terminé à 100 % : {achievements} succès ({missing} manquants). [Voir sur TrueAchievements]({url})",
+    "completion_lost_title": "TrueAchievements : nouveaux succès",
     "mapping_message": "Le jeu **{game}** ({platform}) ne correspond à aucune entrée. Éditeur : {publisher}. Ajoutez `\"{game}\": \"nom TrueAchievements\"` dans `trueachievements/mapping.json` puis appuyez sur le bouton **Recharger le mapping des jeux**.",
     "mapping_title": "TrueAchievements : action requise"
   },
@@ -24,6 +26,7 @@
           "gamertoken": "Token de session (Cookie)",
           "games_file": "Chemin du fichier CSV",
           "notify_auth_error": "Notifier en cas d'erreur d'authentification",
+          "notify_completion_lost": "Notifier les jeux qui ne sont plus terminés à 100 %",
           "notify_mapping": "Notifier les jeux non reconnus (mapping)",
           "now_playing_entity": "Entité de suivi Xbox (Now Playing)",
           "user_agent": "User-Agent du navigateur"
@@ -64,6 +67,18 @@
       },
       "gamerscore": {
         "name": "Gamerscore"
+      },
+      "lost_completions": {
+        "name": "Jeux terminés à reprendre",
+        "state_attributes": {
+          "game_names": {
+            "name": "Noms des jeux"
+          },
+          "games": {
+            "name": "Jeux concernés"
+          }
+        },
+        "unit_of_measurement": "jeux"
       },
       "now_playing": {
         "name": "Jeu en cours",
@@ -129,6 +144,7 @@
           "file_only": "Fichier local uniquement",
           "gamertoken": "Token de session (Cookie)",
           "notify_auth_error": "Notifier en cas d'erreur d'authentification",
+          "notify_completion_lost": "Notifier les jeux qui ne sont plus terminés à 100 %",
           "notify_mapping": "Notifier les jeux non reconnus (mapping)",
           "now_playing_entity": "Entité de suivi Xbox",
           "user_agent": "User-Agent du navigateur"

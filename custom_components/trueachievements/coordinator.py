@@ -22,6 +22,7 @@ from .const import (
     ATTR_COMPLETED_GAMES,
     ATTR_COMPLETION_PCT,
     ATTR_GAMERSCORE,
+    ATTR_LOST_COMPLETIONS,
     ATTR_TA_SCORE,
     ATTR_TOTAL_ACHIEVEMENTS,
     ATTR_TOTAL_GAMES,
@@ -33,16 +34,19 @@ from .const import (
     CONF_GAMES_FILE,
     CONF_MAPPING_FILE,
     CONF_NOTIFY_AUTH_ERROR,
+    CONF_NOTIFY_COMPLETION_LOST,
     CONF_NOTIFY_MAPPING,
     CONF_NOW_PLAYING_ENTITY,
     CONF_USER_AGENT,
     DEFAULT_GAMES_FILE,
     DEFAULT_MAPPING_FILE,
     DEFAULT_NOTIFY_AUTH_ERROR,
+    DEFAULT_NOTIFY_COMPLETION_LOST,
     DEFAULT_NOTIFY_MAPPING,
     DEFAULT_USER_AGENT,
     DOMAIN,
     DOWNLOAD_INTERVAL,
+    EVENT_COMPLETION_LOST,
     ISSUE_URL_MAPPING,
     URL_EXPORT_COLLECTION,
 )
@@ -123,10 +127,18 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self._session_cookie: str = ""
         self._session_loaded: bool = False
+        self._completed_store: Store[dict[str, Any]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.completed"
+        )
+        self._completed_games: dict[str, dict[str, str]] | None = None
+        self._lost_keys: set[str] = set()
+        self._notified_lost: dict[str, str] = {}
+        self.lost_completions: list[dict[str, Any]] = []
         self.games_file: Path = Path("")
         self.excluded_apps: list[str] = []
         self.notify_mapping: bool = DEFAULT_NOTIFY_MAPPING
         self.notify_auth_error: bool = DEFAULT_NOTIFY_AUTH_ERROR
+        self.notify_completion_lost: bool = DEFAULT_NOTIFY_COMPLETION_LOST
         conf_mapping = str(
             entry.options.get(
                 CONF_MAPPING_FILE,
@@ -180,6 +192,12 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 dat.get(CONF_NOTIFY_AUTH_ERROR, DEFAULT_NOTIFY_AUTH_ERROR),
             )
         )
+        self.notify_completion_lost = bool(
+            opts.get(
+                CONF_NOTIFY_COMPLETION_LOST,
+                dat.get(CONF_NOTIFY_COMPLETION_LOST, DEFAULT_NOTIFY_COMPLETION_LOST),
+            )
+        )
 
     async def _handle_state_change(self, _event: Any) -> None:
         """Trigger a refresh when the Xbox game status changes."""
@@ -213,12 +231,142 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data = await self.hass.async_add_executor_job(
             self._read_and_process_csv, game_info
         )
+        games = data.pop("_games", None)
+        if games:
+            await self._async_update_lost_completions(games)
+        data[ATTR_LOST_COMPLETIONS] = self.lost_completions
 
         if "current_game_details" not in data or not data["current_game_details"]:
             data["current_game_details"] = {}
         data["current_game_details"]["entity_picture"] = (game_info or {}).get("image")
         data["last_update"] = self.last_valid_update
         return data
+
+    async def _async_update_lost_completions(
+        self, games: dict[str, dict[str, Any]]
+    ) -> None:
+        """Find the games completed at 100% that are no longer complete.
+
+        TrueAchievements only gives the current progress, so every game seen
+        at 100% is remembered. When such a game is below 100% again (new
+        achievements, usually a DLC), it is reported until it is completed
+        again. On the very first run, the current completions are only
+        recorded: nothing can be reported yet.
+        """
+        if self._completed_games is None:
+            stored = await self._completed_store.async_load()
+            first_run = not stored
+            self._completed_games = dict((stored or {}).get("games", {}))
+            self._lost_keys = set((stored or {}).get("lost", []))
+        else:
+            first_run = False
+
+        known = self._completed_games
+        changed = False
+        lost: list[dict[str, Any]] = []
+
+        for key, game in games.items():
+            if game["completed"]:
+                if key not in known:
+                    known[key] = {"name": game["name"], "platform": game["platform"]}
+                    changed = True
+            elif key in known and not first_run:
+                lost.append(
+                    {
+                        "key": key,
+                        "name": game["name"],
+                        "platform": game["platform"],
+                        "achievements": f"{game['ach_won']} / {game['ach_max']}",
+                        "missing_achievements": game["ach_max"] - game["ach_won"],
+                        "gamerscore": f"{game['gs_won']} G / {game['gs_max']} G",
+                        "game_url": game["url"] or "N/A",
+                    }
+                )
+
+        lost.sort(key=lambda game: str(game["name"]).lower())
+        self.lost_completions = lost
+        lost_keys = {game["key"] for game in lost}
+
+        for game in lost:
+            if game["key"] not in self._lost_keys:
+                _LOGGER.info(
+                    "%s (%s) is no longer completed: %s achievements",
+                    game["name"],
+                    game["platform"],
+                    game["achievements"],
+                )
+                self.hass.bus.async_fire(
+                    EVENT_COMPLETION_LOST,
+                    {
+                        "gamertag": self.gamer_tag,
+                        **{k: v for k, v in game.items() if k != "key"},
+                    },
+                )
+        if lost_keys != self._lost_keys:
+            self._lost_keys = lost_keys
+            changed = True
+
+        if changed:
+            await self._completed_store.async_save(
+                {"games": known, "lost": sorted(lost_keys)}
+            )
+
+        self._handle_lost_completion_notifications(lost)
+
+    def _handle_lost_completion_notifications(self, lost: list[dict[str, Any]]) -> None:
+        """Create one notification per lost game, dismiss it once completed again."""
+        current = {game["key"] for game in lost}
+        for key in list(self._notified_lost):
+            if key not in current:
+                self.hass.add_job(
+                    self.hass.services.async_call,
+                    "persistent_notification",
+                    "dismiss",
+                    {"notification_id": self._notified_lost.pop(key)},
+                )
+
+        if not self.notify_completion_lost:
+            return
+
+        title = self.notify_translations.get(
+            "completion_lost_title", "TrueAchievements: New achievements"
+        )
+        default_tpl = (
+            "**{game}** ({platform}) is no longer completed at 100%: "
+            "{achievements} achievements ({missing} missing). [Open on "
+            "TrueAchievements]({url})"
+        )
+        message_tpl = self.notify_translations.get(
+            "completion_lost_message", default_tpl
+        )
+        for game in lost:
+            if game["key"] in self._notified_lost:
+                continue
+            values = {
+                "game": game["name"],
+                "platform": game["platform"],
+                "achievements": game["achievements"],
+                "missing": game["missing_achievements"],
+                "url": game["game_url"],
+            }
+            try:
+                message = message_tpl.format(**values)
+            except Exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
+                message = default_tpl.format(**values)
+
+            slug = re.sub(r"[^a-z0-9]+", "_", game["key"].lower()).strip("_")
+            notification_id = f"ta_lost_{slug}"
+            self._notified_lost[game["key"]] = notification_id
+            self.hass.add_job(
+                self.hass.services.async_call,
+                "persistent_notification",
+                "create",
+                {
+                    "title": title,
+                    "message": message,
+                    "notification_id": notification_id,
+                },
+            )
 
     def _token_fingerprint(self) -> str:
         """Identify the cookie the user entered, without storing it."""
@@ -465,6 +613,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "started": 0,
         }
         current_game_stats: dict[str, Any] = {}
+        games: dict[str, dict[str, Any]] = {}
         match_found = False
 
         if not self.games_file.exists():
@@ -496,6 +645,17 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     # Safe conversion
                     row_vals = self._get_row_values(row)
+
+                    if row_vals["ach_max"] > 0:
+                        url = row.get("Game URL") or row.get("URL") or ""
+                        key = url or f"{name_csv}|{row.get('Platform', '')}"
+                        games[key] = {
+                            **row_vals,
+                            "name": name_csv,
+                            "platform": row.get("Platform", ""),
+                            "url": url,
+                            "completed": row_vals["ach_won"] >= row_vals["ach_max"],
+                        }
 
                     # Matching Logic — name+platform match takes priority,
                     # falling back to name-only if no row matches the
@@ -548,6 +708,7 @@ class TrueAchievementsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ),
             "current_game_name": current_name or "offline_status",
             "current_game_details": current_game_stats,
+            "_games": games,
         }
 
     def _resolve_mapped_name(self, name: str, publisher: str, platform: str) -> str:

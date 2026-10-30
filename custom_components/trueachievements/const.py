@@ -4,7 +4,7 @@ from datetime import timedelta
 
 NAME = "TrueAchievements"
 DOMAIN = "trueachievements"
-VERSION = "2026.10.1"
+VERSION = "2026.10.2"
 
 # Minimum delay between two downloads of the TrueAchievements CSV export.
 DOWNLOAD_INTERVAL = timedelta(hours=1)
@@ -30,10 +30,12 @@ CONF_EXCLUDED_APPS = "excluded_apps"
 CONF_GAMES_FILE = "games_file"
 CONF_NOTIFY_MAPPING = "notify_mapping"
 CONF_NOTIFY_AUTH_ERROR = "notify_auth_error"
+CONF_NOTIFY_COMPLETION_LOST = "notify_completion_lost"
 
 # Defaults for notification toggles
 DEFAULT_NOTIFY_MAPPING = True
 DEFAULT_NOTIFY_AUTH_ERROR = True
+DEFAULT_NOTIFY_COMPLETION_LOST = True
 
 # Browser identity used when no custom User-Agent is configured.
 # Users can paste their own browser's User-Agent in the options.
@@ -61,6 +63,11 @@ ATTR_COMPLETION_PCT = "completion_percentage"
 ATTR_TOTAL_GAMES = "total_games"
 ATTR_COMPLETED_GAMES = "completed_games"
 ATTR_TOTAL_ACHIEVEMENTS = "total_achievements"
+ATTR_LOST_COMPLETIONS = "lost_completions"
+
+# Event fired when a game completed at 100% is no longer complete
+# (new achievements added to the game, usually with a DLC).
+EVENT_COMPLETION_LOST = f"{DOMAIN}_completion_lost"
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------

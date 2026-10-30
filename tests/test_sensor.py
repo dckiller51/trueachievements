@@ -73,7 +73,7 @@ async def test_sensors_share_one_device(
     entries = er.async_entries_for_config_entry(registry, mock_config_entry.entry_id)
     device_ids = {entry.device_id for entry in entries}
 
-    assert len(entries) == 8
+    assert len(entries) == 9
     assert len(device_ids) == 1
     assert None not in device_ids
     assert get_coordinator(hass, mock_config_entry).gamer_id == GAMER_ID
